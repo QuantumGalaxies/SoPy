@@ -16,13 +16,13 @@ class component :
     d > 0 
     """
 
-    def __init__ (self, lattice : [float] , contents = [[]] ):
+    def __init__ (self, lattice : [float] , contents = [[]], transform = [[]] ):
         self.contents = contents
-        self.transform = [[]]
+        self.transform = transform
         self.lattice   = lattice
 
     def copy(self):
-        other = component(lattice = self.lattice, contents = self.contents)
+        other = component(lattice = self.lattice, contents = self.contents, transform = self.transform)
         return other
     
     def __len__(self):
@@ -60,14 +60,21 @@ class component :
         self.contents = tf.concat([(u[space]),(v[space])],0)
         return self
 
-    def boost(self):
-        u = self.values()
-        q,r = tf.linalg.qr(tf.transpose(u) , full_matrices = False)
-        r   = tf.transpose(r)
-        self.transform = q
-        self.contents  = r
+    def set_boost(self, transform = [[]]):
+        if transform == [[]]:
+            u = self.values()
+            q,r = tf.linalg.qr(tf.transpose(u) , full_matrices = False)
+            self.transform = q
+        else:
+            self.transform = transform
         return self
 
+    def boost(self):
+        u = self.values()
+        self.contents =  tf.transpose(tf.linalg.matmul(tf.transpose(self.transform),tf.transpose(u)))
+        return self
+
+    
     def unboost(self):
         u = self.values()
         self.contents =  tf.transpose(tf.linalg.matmul(self.transform,tf.transpose(u)))
@@ -79,7 +86,7 @@ class component :
 
     def __getitem__(self, r):
         if r < len(self):
-            return component(lattice = self.lattice, contents = [self.contents[r]] )
+            return component(lattice = self.lattice, contents = [self.contents[r]], transform = self.transform )
     
     def sample(self, sample_rank, num_samples = 1):
         """

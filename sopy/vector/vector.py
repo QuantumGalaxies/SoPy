@@ -33,9 +33,10 @@ class vector :
         return tf.math.sqrt(self.dot(self))
 
     def boost(self):
+        transforms =[[]]+ [component ( contents = self[d] ,lattice = self.contents[0][d].lattice ).set_boost().transform for d in self.dims(True)]
         new = vector()
         for r in range(len(self)):
-            new.contents += [ [self.contents[r][d].copy().boost() for d in self.dims(False)] ]
+            new.contents += [ [self.contents[r][d].copy().set_boost(transform = transforms[d]).boost() for d in self.dims(False)] ]
         return new
         
     def unboost(self):
@@ -79,22 +80,20 @@ class vector :
             other.contents[r][0] *= m
         return other
 
-    
     def learn(self, other , iterate = 0, alpha = 1e-9):
         assert isinstance(other, vector)
         u = self##train
         v = other##origin
         eye = tf.linalg.eye(len(u),dtype = tf.float64)            
         q = vector()
-        lattices = [ u.contents[0][d].lattice for d in u.dims(True) ]
-        comps = [ component(contents =tf.linalg.matmul(  
+        comps = [[]]+[ component(contents =tf.linalg.matmul(  
                         tf.linalg.inv( u.dot(u,norm_ = True, exclude_dim = target_dim, sum_ = False) + alpha*eye),
                         tf.linalg.matmul(u.dot(v,norm_ = True, exclude_dim = target_dim, sum_ = False),
                                          tf.multiply(v[0],v[target_dim]), transpose_b = False) )
-                         , lattice = lattices[target_dim-1]
+                         , lattice = u.contents[0][target_dim].lattice, transform = self.contents[0][target_dim].transform
                         ) for target_dim in u.dims(True) ]
-        amps = amplitude(contents = 1./len(u.dims(True))*tf.math.reduce_sum([comps[d-1].amplitude() for d in u.dims(True) ],axis=0))
-        q.contents = [[ amps[r] ] + [ comps[d-1][r].normalize() for d in u.dims(True) ] for r in range(len(u)) ]
+        amps = amplitude(contents = 1./len(u.dims(True))*tf.math.reduce_sum([comps[d].amplitude() for d in u.dims(True) ],axis=0))
+        q.contents = [[ amps[r] ] + [ comps[d][r].normalize() for d in u.dims(True) ] for r in range(len(u)) ]
         if iterate == 0:
             return q
         else:
@@ -191,7 +190,7 @@ class vector :
         assert min(lens) == max(lens)
         v =  [ amplitude(a) ]
         for d,(l,position, sigma,lattice) in enumerate(zip( ls, positions, sigmas ,lattices)):
-             v +=[ component(lattice).gaussian(position = position,sigma = sigma, l = l).normalize()]
+             v +=[ component(lattice = lattice).gaussian(position = position,sigma = sigma, l = l).normalize()]
         self.contents += [v]
         return self
 
@@ -220,11 +219,11 @@ class vector :
         return new
     
     def delta(self, a , positions  , spacings, lattices  ):
-        lens = [ len(x) for x in [ls,positions,sigmas,lattices]]
+        lens = [ len(x) for x in [positions,spacings,lattices]]
         assert min(lens) == max(lens)
         v =  [ amplitude(a) ] 
         for d,(position, spacing,lattice) in enumerate(zip( positions, spacings ,lattices)):
-             v +=[ component(lattice).delta(position = position,spacings = spacings).normalize()]
+             v +=[ component(lattice = lattice).delta(position = position,spacing = spacing).normalize()]
         self.contents += [v]
         return self
 

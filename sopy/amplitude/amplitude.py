@@ -24,6 +24,9 @@ class amplitude :
     def boost(self):
         return self
 
+    def set_boost(self, transform = [[]]):
+        return self
+    
     def unboost(self):
         return self
     
