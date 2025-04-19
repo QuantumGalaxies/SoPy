@@ -48,6 +48,8 @@ class vector :
     def dot(self, other, norm_ = False, exclude_dim : int = -1 , sum_ = True):
         """
         inner product Euclidiean between v and u in [R]**N, same as (canonRanks)* N*[R]
+
+        norm_=True will not include dim=0
         """
         assert isinstance(other, vector)
         def innert(vector1, vector2):
@@ -230,3 +232,18 @@ class vector :
     def sample(self, num_samples ):
         sample_ranks = amplitude( contents = self[0] ).sample( num_samples ) 
         return tf.convert_to_tensor([ [ self.contents[r][d].sample(sample_rank=0,num_samples=1) for d in self.dims() ] for r in sample_ranks ])
+
+
+    def transpose(self,tl):
+        """
+        meant to input a dictionary with integer keys, which includes 0 as a amplitude
+        """
+        
+        comps = [ amplitude( contents = tl[0]) ]+ [ component( contents = tl[key], lattice = range(len(tl[key]))) for key in tl if key != 0 ]   
+        other = vector()
+        other.contents = [ [ comps[d][r] for d in range(len(comps)) ] for r in range(len(comps[0])) ]
+        return other
+
+
+
+
