@@ -146,7 +146,7 @@ class component :
         position = tf.constant(position, dtype=tf.float64)
         spacing    = tf.constant(spacing, dtype=tf.float64)
         
-        self.contents =  tf.convert_to_tensor([[ (tf.math.sin( pi2/2. *  ( x - position )/ spacing )/( pi2/2. *  ( x - position )/ spacing ) if x != position else 1 ) for x in self.lattice ]])
+        self.contents =  1./tf.math.sqrt(spacing)*tf.convert_to_tensor([[ (tf.math.sin( pi2/2. *  ( x - position )/ spacing )/( pi2/2. *  ( x - position )/ spacing ) if x != position else 1 ) for x in self.lattice ]])
         return self
 
     def values(self):
