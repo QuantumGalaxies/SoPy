@@ -15,16 +15,16 @@ class amplitude :
     d = 0
     """
 
-    def __init__(self, a = 1 , contents = [[]]):
-        if contents == [[]]:
-            self.contents = tf.constant([[a]], dtype = tf.float64)
-        else:
+    def __init__(self, a = 1 , contents = []):
+        if contents == []:
+            self.contents = tf.convert_to_tensor([[tf.constant(a, dtype = tf.float64)]], dtype = tf.float64)
+        else:    
             self.contents = contents
-
+        
     def boost(self):
         return self
 
-    def set_boost(self, transform = [[]]):
+    def set_boost(self, transform = []):
         return self
     
     def unboost(self):
@@ -99,11 +99,21 @@ class amplitude :
         if r <  len(self): 
             return amplitude( contents = [self.contents[r]] )
             
+    def __imul__(self, m):
+        self.contents *= tf.constant(m, dtype= tf.float64)
+        return self
+    
+    def __mul__(self, m):
+        new = self.copy()
+        new *= m
+        return new
+
+    def __rmul__(self,m):
+        new = self.copy()
+        new *= m
+        return new
+
 
     
-    def __imul__(self, m):
-        self.contents *= m
-        return self
-
     def values(self):
         return (self.contents)
