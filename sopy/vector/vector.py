@@ -298,14 +298,14 @@ class vector :
         return tf.convert_to_tensor([ [ self.contents[r][d].sample(sample_rank=0,num_samples=1) for d in self.dims() ] for r in sample_ranks ])
 
 
-    def transpose(self,tl):
+    def transpose(self, tl, lattices_dict):
         """
         meant to input a dictionary with integer keys, which includes 0 as a amplitude
 
-        assuming first rank has lattice of all ranks
+        lattices_dict is a dictionary in same key of lattices        
         """
         
-        comps = [ amplitude( contents = tl[0]) ]+ [ component( contents = tl[key], lattice = self.contents[0][key].lattice) for key in tl if key != 0 ]   
+        comps = [ amplitude( contents = tl[0]) ]+ [ component(contents=tl[key], lattice=lattices_dict[key]) for key in tl if key != 0 ]   
         other = vector()
         other.contents = [ [ comps[d][r] for d in range(len(comps)) ] for r in range(len(comps[0])) ]
         return other
