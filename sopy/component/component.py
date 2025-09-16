@@ -137,22 +137,24 @@ class component :
 
 
     def gaussian(self, position  , sigma ,l: int = 0 , wavenumber = 0., phi = 0):
-        position = tf.constant(position, dtype=tf.float64)
-        sigma    = tf.constant(sigma, dtype=tf.float64)
-        wavenumber      = tf.constant(wavenumber, dtype=tf.float64)
-        phi      = tf.constant(phi, dtype=tf.float64)
+        position   = tf.constant(position, dtype=tf.float64)
+        sigma      = tf.constant(sigma, dtype=tf.float64)
+        wavenumber = tf.constant(wavenumber, dtype=tf.float64)
+        phi        = tf.constant(phi, dtype=tf.float64)
         
-        self.contents = tf.convert_to_tensor([[ tf.math.sqrt( 1. / pi2 / sigma**2 ) * (tf.math.cos( wavenumber * (x - position) + phi ) * tf.math.exp( -1/2. * ( x - position )**2/sigma**2 ))*(x-position)**l for x in self.lattice ]])
+        self.contents = tf.convert_to_tensor([[ (tf.math.cos( wavenumber * (x - position) + phi ) * tf.math.exp( -1/2. * ( x - position )**2/sigma**2 ))*(x-position)**l for x in self.lattice ]])
+        self.contents = tf.linalg.normalize(self.contents)[0]
         return self
 
-
+    
     def delta(self, position  , spacing , wavenumber = 0 , phi = 0 ):
-        position = tf.constant(position, dtype=tf.float64)
+        position   = tf.constant(position, dtype=tf.float64)
         spacing    = tf.constant(spacing, dtype=tf.float64)
-        wavenumber      = tf.constant(wavenumber, dtype=tf.float64)
-        phi      = tf.constant(phi, dtype=tf.float64)
+        wavenumber = tf.constant(wavenumber, dtype=tf.float64)
+        phi        = tf.constant(phi, dtype=tf.float64)
         
-        self.contents =  1./tf.math.sqrt(spacing)*tf.convert_to_tensor([[ tf.math.cos( wavenumber * (x-position) + phi ) * (tf.math.sin( pi2/2. *  ( x - position )/ spacing )/( pi2/2. *  ( x - position )/ spacing ) if x != position else 1 ) for x in self.lattice ]])            
+        self.contents =  tf.convert_to_tensor([[ tf.math.cos( wavenumber * (x-position) + phi ) * (tf.math.sin( pi2/2. *  ( x - position )/ spacing )/( pi2/2. *  ( x - position )/ spacing ) if x != position else 1 ) for x in self.lattice ]])            
+        self.contents = tf.linalg.normalize(self.contents)[0]
         return self
 
     def values(self):

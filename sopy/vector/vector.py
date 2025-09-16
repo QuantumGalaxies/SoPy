@@ -10,6 +10,7 @@
 from .. import amplitude
 from .. import component
 import tensorflow as tf
+import numpy as np
 from sklearn.cluster import KMeans
 class vector :
 
@@ -45,7 +46,7 @@ class vector :
             new.contents += [ [self.contents[r][d].copy().unboost() for d in self.dims(False)] ]
         return new    
     
-    def dot(self, other, norm_ = False, exclude_dim : int = -1 , sum_ = True):
+    def dot(self, other, another = None, norm_ = False, exclude_dim : int = -1 , sum_ = True):
         """
         inner product Euclidiean between v and u in [R]**N, same as (canonRanks)* N*[R]
 
@@ -59,7 +60,17 @@ class vector :
                     if dim != exclude_dim:
                       uv += [tf.matmul(vector1[dim],vector2[dim], transpose_b = True)]
                 return tf.math.reduce_prod(tf.convert_to_tensor(uv),axis=0)
-            uv = innert(self,other)
+
+            def innert2(vector1, vector2, vector3):
+                uv = []
+                for dim in vector1.dims(norm_):
+                    if dim != exclude_dim:
+                      uv += [tf.matmul(vector1[dim],[ np.reshape(np.outer(v2, v3),(-1)) for v2 in vector2[dim] for v3 in vector3[dim] ],  transpose_b = True)]
+                return tf.math.reduce_prod(tf.convert_to_tensor(uv),axis=0)
+            if another == None:
+                uv = innert(self,other)
+            else:
+                uv = innert2(self,other,another)
             if sum_:
                 return tf.math.reduce_sum(uv)
             else:
@@ -232,7 +243,7 @@ class vector :
         lens = [ len(x) for x in [ls,positions,sigmas,lattices,wavenumbers, phis]]
         assert min(lens) == max(lens)
         v =  [ amplitude(a) ]
-        for d,(l,position, sigma,lattice,wavenumber,phi) in enumerate(zip( ls, positions, sigmas ,lattices,wavenumbers, phis)):
+        for d,(l,position, sigma, lattice, wavenumber, phi) in enumerate(zip( ls, positions, sigmas ,lattices,wavenumbers, phis)):
              v +=[ component(lattice = lattice).gaussian(position = position,sigma = sigma, l = l, wavenumber = wavenumber, phi = phi)]
         self.contents += [v]
         return self
@@ -276,7 +287,7 @@ class vector :
     def delta(self, a , positions  , spacings, lattices , wavenumbers,phis ):
         lens = [ len(x) for x in [positions,spacings, lattices, wavenumbers,phis]]
         assert min(lens) == max(lens)
-        v =  [ amplitude(a) ] 
+        v =  [ amplitude(a) ]
         for d,(position, spacing,wavenumber,phi, lattice) in enumerate(zip( positions, spacings, wavenumbers,phis, lattices)):
              v +=[ component(lattice = lattice).delta(position = position,spacing = spacing, wavenumber = wavenumber, phi = phi)]
         self.contents += [v]
@@ -290,9 +301,11 @@ class vector :
     def transpose(self,tl):
         """
         meant to input a dictionary with integer keys, which includes 0 as a amplitude
+
+        assuming first rank has lattice of all ranks
         """
         
-        comps = [ amplitude( contents = tl[0]) ]+ [ component( contents = tl[key], lattice = range(len(tl[key]))) for key in tl if key != 0 ]   
+        comps = [ amplitude( contents = tl[0]) ]+ [ component( contents = tl[key], lattice = self.contents[0][key].lattice) for key in tl if key != 0 ]   
         other = vector()
         other.contents = [ [ comps[d][r] for d in range(len(comps)) ] for r in range(len(comps[0])) ]
         return other
@@ -304,3 +317,20 @@ class vector :
         self.contents = contents
         return self
 
+    def trace( self, tr_dims ):
+        """
+        trace over dimensions specified
+        """
+        tl = {}
+        for space in self.dims(False):
+            if space not in tr_dims:
+                tl[space] = self[space]
+        return self.transpose(tl)
+
+    def render1( self ):
+        """
+        report 1d 
+        """
+        assert self.dims() == [1]
+        d =  self.decompose(1)
+        return (d[1] * d[0])[0]
