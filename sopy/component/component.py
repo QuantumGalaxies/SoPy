@@ -16,7 +16,7 @@ class component :
     d > 0 
     """
 
-    def __init__ (self, lattice : [float] , contents = [], transform = [] ):
+    def __init__ (self, lattice , contents = [], transform = [] ):
         self.contents = contents
         self.transform = transform
         self.lattice   = lattice
@@ -59,7 +59,7 @@ class component :
         assert isinstance(other, component)
         u = self.values()
         v = other.values()
-        self.contents = tf.concat([(u[space]),(v[space])],0)
+        self.contents = tf.concat([u,v],0)
         return self
 
     def set_boost(self, transform = []):

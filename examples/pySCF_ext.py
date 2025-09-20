@@ -8,19 +8,11 @@
 ################################################
 
 
-
+from pyscf import gto, scf 
 import pandas as pd
-
-
-# lame training wheels
-from sys import path
-path += ['..']
-#
-
 import sopy as sp
 
 import numpy as np 
-from pyscf import gto, scf
 
 TOL = 1e-8
 

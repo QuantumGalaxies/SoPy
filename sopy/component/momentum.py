@@ -11,7 +11,7 @@ import tensorflow as tf
 from . import component as c
 
 class momentum(c.component):
-    def __init__(self, lattice : [float] , contents = [[]], transform = [[]] ):
+    def __init__(self, lattice , contents = [[]], transform = [[]] ):
         super().__init__(lattice, contents, transform)
         zero = tf.constant(0., tf.float64)
         one  = tf.constant(1., tf.float64)
