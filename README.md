@@ -18,6 +18,18 @@ Expect a paper to be published when time can be found to do so.
 
 `import sopy as sp`
 
+# New features
+
+## pySCF
+
+Take an arbitrary electronic structure system defined in pySCF, you can put it into SoP 3D space.
+A stage towards various applications. Go to examples/pySCF_wavefunction.ipynb to follow my logic.
+
+## Fourier Transform
+
+The work here, should not fall into the trap of native-Fast Fourier Transform. Multiply an arbritary vector by exp(i k X^).
+Using really sophisicated operator logic embedded in recent work.
+
 ### Functions
 
 First set a lattice, 
