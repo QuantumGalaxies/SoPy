@@ -30,6 +30,11 @@ A stage towards various applications. Go to examples/pySCF_wavefunction.ipynb to
 The work here, should not fall into the trap of native-Fast Fourier Transform. Multiply an arbritary vector by exp(i k X^).
 Using really sophisicated operator logic embedded in recent work.
 
+## Gaussian Blurr Transform
+
+Multiply an arbritary vector by exp(-0.5 alpha  (X^-position)**2 ).
+Using really sophisicated operator logic embedded in recent work.
+
 ## Tensorly interface
 
 Unclear when its appropriate, but you can use examples/ext to expand SoP into space and use Tensorly to reduce it again.
