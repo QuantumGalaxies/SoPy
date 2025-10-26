@@ -166,7 +166,115 @@ class operand():
 
         return operand(re__,im__)
 
+    def exp2(self, alphas, positions):
+        """PI_dim < x | compute exp( - 0.5 alphas[dim] (x-positions[dim])^2 ) | x'>"""
+        re__ = v.vector()
+        im__ = v.vector()
+
+        signage = 1.0
+        #PG2.self
+        if True:
+            for rank in self.re.contents:
+                new_rank_re = []
+                new_rank_im = []
+                for i,channel in enumerate(rank):
+                    if i == 0:
+                        new_rank_re += [signage*channel]
+                        new_rank_im += [signage*channel]
+                    else:
+                        re,im = channel.g2(alphas[i-1], positions[i-1], P=True)
+                        new_rank_re += [re]
+                        new_rank_im += [im]
+    
+                re__ += v.vector().load([new_rank_re]).copy(True)
+                im__ += v.vector().load([new_rank_im]).copy(True)  
+            
+            for rank in self.im.contents:
+                new_rank_re = []
+                new_rank_im = []
+                for i,channel in enumerate(rank):
+                    if i == 0:
+                        new_rank_re += [-1*signage*channel]
+                        new_rank_im += [signage*channel]
+                    else:
+                        im,re_m = channel.g2(alphas[i-1], positions[i-1], P=True)
+                        new_rank_re += [re_m]
+                        new_rank_im += [im]
+                re__ += v.vector().load([new_rank_re]).copy(True)
+                im__ += v.vector().load([new_rank_im]).copy(True)  
+
+
+        ## H2.self
+        if True:
+            for rank in self.re.contents:
+                new_rank_re = []
+                new_rank_im = []
+                for i,channel in enumerate(rank):
+                    if i == 0:
+                        new_rank_re += [channel]
+                        new_rank_im += [channel]
+                    else:
+                        re,im = channel.h2(alphas[i-1], positions[i-1])
+                        new_rank_re += [re]
+                        new_rank_im += [im]
+                re__ += v.vector().load([new_rank_re]).copy(True)
+                im__ += v.vector().load([new_rank_im]).copy(True)     
+                 
+            for rank in self.im.contents:
+                new_rank_re = []
+                new_rank_im = []
+                for i,channel in enumerate(rank):
+                    if i == 0:
+                        new_rank_re += [-1*channel]
+                        new_rank_im += [channel]
+                    else:
+                        im, re_m = channel.h2(alphas[i-1], positions[i-1])
+                        new_rank_re += [re_m]
+                        new_rank_im += [im]
+                re__ += v.vector().load([new_rank_re]).copy(True)
+                im__ += v.vector().load([new_rank_im]).copy(True)     
+
+
+        ##G2P.self
+        if True:
+            signage *= -1
+            for rank in self.re.contents:
+                new_rank_re = []
+                new_rank_im = []
+                for i,channel in enumerate(rank):
+                    if i == 0:
+                        new_rank_re += [signage*channel]
+                        new_rank_im += [signage*channel]
+                    else:
+                        re,im = channel.P().g2(alphas[i-1], positions[i-1])
+                        new_rank_re += [re]
+                        new_rank_im += [im]
+                re__ += v.vector().load([new_rank_re]).copy(True)
+                im__ += v.vector().load([new_rank_im]).copy(True)     
+    
+            for rank in self.im.contents:
+                new_rank_re = []
+                new_rank_im = []
+                for i,channel in enumerate(rank):
+                    if i == 0:
+                        new_rank_re += [-1*signage*channel]
+                        new_rank_im += [   signage*channel]
+                    else:
+                        im, re_m = channel.P().g2(alphas[i-1], positions[i-1])
+                        new_rank_re += [re_m]
+                        new_rank_im += [im]
+                re__ += v.vector().load([new_rank_re]).copy(True)
+                im__ += v.vector().load([new_rank_im]).copy(True)     
+
+        return operand(re__,im__)
+
+
 
     def cot(self, other):
+        """complex outer product"""
+        return self.cdot(other)
+
+    def cdot(self, other):
+        """complex dot product"""
         return complex( self.re.dot(other.re) + self.im.dot(other.im) , self.im.dot(other.re) - self.re.dot(other.im) ) 
 

@@ -9,6 +9,8 @@
 
 import tensorflow as tf
 from . import component as c
+from bandlimit.gaussian import ops
+
 
 class momentum(c.component):
     def __init__(self, lattice , contents = [[]], transform = [[]] ):
@@ -38,8 +40,31 @@ class momentum(c.component):
         if compl :
             new.complexity *= tf.constant(tf.complex(zero,-one))
         return new
+    
+    def h(self, k, poly = False):
+        """
+        momentum boost 
+        diagonal piece
+        """
+        zero = tf.constant(0., tf.float64)
+        one  = tf.constant(1., tf.float64)
+        k_re = tf.constant(k, dtype = tf.float64)
+        coef = ( (one if k_re >= 0 else one) if not poly else -tf.math.abs(k_re)*self.spacing/c.pi2 )
 
+        if ( abs(k_re) > c.pi2 / self.spacing /2 ):##A
+            mul = tf.convert_to_tensor([ tf.complex(zero,zero) for position in tf.constant(self.lattice, dtype = tf.float64) ])
+        else:
+            mul = tf.convert_to_tensor([ 
+                tf.complex(coef*tf.math.cos( k_re * position ), -coef*tf.math.sin(k_re * position ) ) for position in tf.constant(self.lattice, dtype = tf.float64) ] )
+
+        re = momentum( self.lattice, tf.convert_to_tensor([ tf.math.real(mul * self.complexity) * value for value in self.contents ], dtype = tf.float64),self.transform)
+        im = momentum( self.lattice, tf.convert_to_tensor([ tf.math.imag(mul * self.complexity) * value for value in self.contents ], dtype = tf.float64),self.transform) 
+        return re,im
+        
     def g(self, k, P = False):
+        """
+        momentum boost
+        off diagonal piece"""
         zero = tf.constant(0., tf.float64)
         one  = tf.constant(1., tf.float64)
         k_re = tf.constant(k, dtype = tf.float64)
@@ -62,19 +87,38 @@ class momentum(c.component):
             im = momentum( self.lattice, tf.convert_to_tensor([ tf.math.imag(mul * self.complexity) * value for value in self.contents ], dtype = tf.float64),self.transform)             
         return re,im
     
-    def h(self, k, poly = False):
+    def h2(self, alpha, position):
+        """
+        gaussian ops 
+        diagonal piece
+        """
         zero = tf.constant(0., tf.float64)
         one  = tf.constant(1., tf.float64)
-        k_re = tf.constant(k, dtype = tf.float64)
-        coef = ( (one if k_re >= 0 else one) if not poly else -tf.math.abs(k_re)*self.spacing/c.pi2 )
+        k_re = tf.constant(alpha, dtype = tf.float64)
 
-        if ( abs(k_re) > c.pi2 / self.spacing /2 ):##A
-            mul = tf.convert_to_tensor([ tf.complex(zero,zero) for position in tf.constant(self.lattice, dtype = tf.float64) ])
-        else:
-            mul = tf.convert_to_tensor([ 
-                tf.complex(coef*tf.math.cos( k_re * position ), -coef*tf.math.sin(k_re * position ) ) for position in tf.constant(self.lattice, dtype = tf.float64) ] )
+        mul = tf.convert_to_tensor([ 
+                tf.complex(ops(self.spacing, alpha, position_p-position, 1),0) for position_p in tf.constant(self.lattice, dtype = tf.float64) ] )
 
         re = momentum( self.lattice, tf.convert_to_tensor([ tf.math.real(mul * self.complexity) * value for value in self.contents ], dtype = tf.float64),self.transform)
-        im = momentum( self.lattice, tf.convert_to_tensor([ tf.math.imag(mul * self.complexity) * value for value in self.contents ], dtype = tf.float64),self.transform) 
+        im = momentum( self.lattice, tf.convert_to_tensor([ tf.math.imag(mul * self.complexity) * value for value in self.contents ], dtype = tf.float64),self.transform)             
         return re,im
-        
+
+    def g2(self, alpha, position, P = False):
+        """
+        gaussian ops
+        off diagonal piece
+        """
+        zero = tf.constant(0., tf.float64)
+        one  = tf.constant(1., tf.float64)
+        k_re = tf.constant(alpha, dtype = tf.float64)
+        i_m  = tf.complex(zero,-one)
+
+        mul = tf.convert_to_tensor([ 
+                tf.complex(ops(self.spacing, alpha, position_p-position, 0),0) for position_p in tf.constant(self.lattice, dtype = tf.float64) ] )
+        if P:
+            re = momentum( self.lattice, tf.convert_to_tensor([ tf.math.real(mul * self.complexity*i_m) * value for value in self.contents ], dtype = tf.float64),self.transform).P(False)
+            im = momentum( self.lattice, tf.convert_to_tensor([ tf.math.imag(mul * self.complexity*i_m) * value for value in self.contents ], dtype = tf.float64),self.transform).P(False)
+        else:
+            re = momentum( self.lattice, tf.convert_to_tensor([ tf.math.real(mul * self.complexity) * value for value in self.contents ], dtype = tf.float64),self.transform)
+            im = momentum( self.lattice, tf.convert_to_tensor([ tf.math.imag(mul * self.complexity) * value for value in self.contents ], dtype = tf.float64),self.transform)             
+        return re,im
