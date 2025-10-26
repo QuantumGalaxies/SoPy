@@ -42,19 +42,19 @@ First set a lattice,
 
 2D gaussian at (2,6) with sigmas (1,1), and polynominal 0,0
 
-	u = sp.vector().gaussian(a = 1,positions = [2,6],sigmas = [1,1],ls = [0,0], lattices = lattices, wavenumbers = [0,0], phis = [0,0])
+	u = sp.vector().gaussian(a = 1,positions = [2,6],sigmas = [1,1],ls = [0,0], lattices = lattices)
 
 2D gaussian at (0.1,-0.6) with sigmas (1,1), and polynominal 0,0
 
-	k = sp.vector().gaussian(a = 1,positions = [0.1,-0.6],sigmas = [1,1],ls = [0,0], lattices = lattices, wavenumbers = [0,0], phis = [0,0])
+	k = sp.vector().gaussian(a = 1,positions = [0.1,-0.6],sigmas = [1,1],ls = [0,0], lattices = lattices)
 
 2D gaussian at (-1,-2) with sigmas (1,1), and polynominal 1,1
 
-	k = k.gaussian(a = 2,positions = [-1,-2],sigmas = [1,1],ls = [1,1], lattices = lattices, wavenumbers = [0,0], phis = [0,0])
+	k = k.gaussian(a = 2,positions = [-1,-2],sigmas = [1,1],ls = [1,1], lattices = lattices)
 
 2D gaussian at (-2,-5) with sigmas (1,1), and polynominal 1,0
 
-	v = k.copy().gaussian(a = 2,positions = [-2,-5],sigmas = [1,1],ls = [1,0], lattices = lattices, wavenumbers = [0,0], phis = [0,0])
+	v = k.copy().gaussian(a = 2,positions = [-2,-5],sigmas = [1,1],ls = [1,0], lattices = lattices)
 
  Multiply operand by exp_i(k ^X ) for k = (1,0)
 
