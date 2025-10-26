@@ -1,7 +1,7 @@
 # Sums Of Product
 ## SoPy
 
-## Representation and Decomposition with Sums of Product for Operations in separated dimensions
+## Sums of Products for data and science
 
 ### Conceptual
 
