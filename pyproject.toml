@@ -17,7 +17,7 @@ classifiers = [
     'Intended Audience :: Science/Research',
     'Intended Audience :: Developers',
 ]
-dependencies = ['tensorflow>=2.16.1','scikit-learn>=1.6.1','bandlimit>=1.1.7']
+dependencies = ['tensorflow>=2.16.1','scikit-learn>=1.6.1','bandlimit>=1.2.0']
 dynamic = []
 license = "MIT"
 license-files = ["LICENSE.txt"]
