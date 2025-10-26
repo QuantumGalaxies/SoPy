@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sopy-quantum"
-version = "1.2.1"
+version = "1.2.2"
 authors = [
   { name="Jonathan Jerke", email="jonathan@quantumgalaxies.org" },
 ]
-description = "Representation and Decomposition with Sums of Product for Operations in separated dimensions"
+description = "Representation and Decomposition with Sums of Product for Operations in separated dimensions. Now using bandlimit place data on lattice."
 readme = "README.md"
 requires-python = ">=3.12"
 classifiers = [
@@ -17,7 +17,7 @@ classifiers = [
     'Intended Audience :: Science/Research',
     'Intended Audience :: Developers',
 ]
-dependencies = ['tensorflow>=2.16.1','scikit-learn>=1.6.1']
+dependencies = ['tensorflow>=2.16.1','scikit-learn>=1.6.1','bandlimit']
 dynamic = []
 license = "MIT"
 license-files = ["LICENSE.txt"]

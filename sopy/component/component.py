@@ -9,6 +9,7 @@
 
 
 import tensorflow as tf
+from bandlimit.gaussian import compute
 pi2 = 6.283185307179586476925286766559005768394338798
 
 class component :
@@ -20,6 +21,7 @@ class component :
         self.contents = contents
         self.transform = transform
         self.lattice   = lattice
+        self.spacing   = lattice[1] - lattice[0]
 
     def copy(self):
         other = component(lattice = self.lattice, contents = self.contents, transform = self.transform)
@@ -136,24 +138,21 @@ class component :
         return  tf.convert_to_tensor(discrete_inverse_transform_sampling ( u[sample_rank], self.lattice ) )
 
 
-    def gaussian(self, position  , sigma ,l: int = 0 , wavenumber = 0., phi = 0):
+    def gaussian(self, position :float, sigma :float, l: int = 0 ):
         position   = tf.constant(position, dtype=tf.float64)
         sigma      = tf.constant(sigma, dtype=tf.float64)
-        wavenumber = tf.constant(wavenumber, dtype=tf.float64)
-        phi        = tf.constant(phi, dtype=tf.float64)
         
-        self.contents = tf.convert_to_tensor([[ (tf.math.cos( wavenumber * (x - position) + phi ) * tf.math.exp( -1/2. * ( x - position )**2/sigma**2 ))*(x-position)**l for x in self.lattice ]])
+        self.contents = tf.convert_to_tensor([[ compute(self.spacing, l, 1/sigma**2, position, x) for x in self.lattice ]])
+        
         self.contents = tf.linalg.normalize(self.contents)[0]
         return self
 
     
-    def delta(self, position  , spacing , wavenumber = 0 , phi = 0 ):
+    def delta(self, position : float , spacing : float ):
         position   = tf.constant(position, dtype=tf.float64)
         spacing    = tf.constant(spacing, dtype=tf.float64)
-        wavenumber = tf.constant(wavenumber, dtype=tf.float64)
-        phi        = tf.constant(phi, dtype=tf.float64)
         
-        self.contents =  tf.convert_to_tensor([[ tf.math.cos( wavenumber * (x-position) + phi ) * (tf.math.sin( pi2/2. *  ( x - position )/ spacing )/( pi2/2. *  ( x - position )/ spacing ) if x != position else 1 ) for x in self.lattice ]])            
+        self.contents =  tf.convert_to_tensor([[ (tf.math.sin( pi2/2. *  ( x - position )/ spacing )/( pi2/2. *  ( x - position )/ spacing ) if x != position else 1 ) for x in self.lattice ]])            
         self.contents = tf.linalg.normalize(self.contents)[0]
         return self
 
