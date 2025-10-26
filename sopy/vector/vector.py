@@ -239,12 +239,12 @@ class vector :
         return new
 
     
-    def gaussian(self, a , positions  , sigmas ,ls , lattices , wavenumbers , phis):
-        lens = [ len(x) for x in [ls,positions,sigmas,lattices,wavenumbers, phis]]
+    def gaussian(self, a , positions  , sigmas ,ls , lattices):
+        lens = [ len(x) for x in [ls,positions,sigmas,lattices]]
         assert min(lens) == max(lens)
         v =  [ amplitude(a) ]
-        for d,(l,position, sigma, lattice, wavenumber, phi) in enumerate(zip( ls, positions, sigmas ,lattices,wavenumbers, phis)):
-             v +=[ component(lattice = lattice).gaussian(position = position,sigma = sigma, l = l, wavenumber = wavenumber, phi = phi)]
+        for d,(l,position, sigma, lattice) in enumerate(zip( ls, positions, sigmas ,lattices)):
+             v +=[ component(lattice = lattice).gaussian(position = position,sigma = sigma, l = l)]
         self.contents += [v]
         return self
 
@@ -284,12 +284,12 @@ class vector :
             raise StopIteration
         return new
     
-    def delta(self, a , positions  , spacings, lattices , wavenumbers,phis ):
-        lens = [ len(x) for x in [positions,spacings, lattices, wavenumbers,phis]]
+    def delta(self, a , positions  , spacings, lattices  ):
+        lens = [ len(x) for x in [positions,spacings, lattices]]
         assert min(lens) == max(lens)
         v =  [ amplitude(a) ]
-        for d,(position, spacing,wavenumber,phi, lattice) in enumerate(zip( positions, spacings, wavenumbers,phis, lattices)):
-             v +=[ component(lattice = lattice).delta(position = position,spacing = spacing, wavenumber = wavenumber, phi = phi)]
+        for d,(position, spacing, lattice) in enumerate(zip( positions, spacings, lattices)):
+             v +=[ component(lattice = lattice).delta(position = position,spacing = spacing)]
         self.contents += [v]
         return self
 

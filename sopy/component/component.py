@@ -142,7 +142,7 @@ class component :
         position   = tf.constant(position, dtype=tf.float64)
         sigma      = tf.constant(sigma, dtype=tf.float64)
         
-        self.contents = tf.convert_to_tensor([[ compute(self.spacing, l, 1/sigma**2, position, x) for x in self.lattice ]])
+        self.contents = tf.convert_to_tensor([[ compute(self.spacing, l, 1/sigma**2, position, x) for x in self.lattice ]], dtype = tf.float64)
         
         self.contents = tf.linalg.normalize(self.contents)[0]
         return self
