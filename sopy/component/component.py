@@ -142,9 +142,7 @@ class component :
         position   = tf.constant(position, dtype=tf.float64)
         sigma      = tf.constant(sigma, dtype=tf.float64)
         
-        self.contents = tf.convert_to_tensor([[ compute(self.spacing, l, 1/sigma**2, position, x) for x in self.lattice ]], dtype = tf.float64)
-        
-        self.contents = tf.linalg.normalize(self.contents)[0]
+        self.contents = tf.convert_to_tensor([[ compute(self.spacing, l, 1./sigma**2, position, x) for x in self.lattice ]], dtype = tf.float64)
         return self
 
     
@@ -152,8 +150,7 @@ class component :
         position   = tf.constant(position, dtype=tf.float64)
         spacing    = tf.constant(spacing, dtype=tf.float64)
         
-        self.contents =  tf.convert_to_tensor([[ (tf.math.sin( pi2/2. *  ( x - position )/ spacing )/( pi2/2. *  ( x - position )/ spacing ) if x != position else 1 ) for x in self.lattice ]])            
-        self.contents = tf.linalg.normalize(self.contents)[0]
+        self.contents =  tf.convert_to_tensor([[ 1.0/tf.sqrt(spacing)* (tf.math.sin( pi2/2. *  ( x - position )/ spacing )/( pi2/2. *  ( x - position )/ spacing ) if x != position else 1 ) for x in self.lattice ]])            
         return self
 
     def values(self):
