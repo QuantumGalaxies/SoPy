@@ -16,7 +16,7 @@ class amplitude :
     """
 
     def __init__(self, a = 1 , contents = []):
-        if contents == []:
+        if len(contents)==0:
             self.contents = tf.convert_to_tensor([[tf.constant(a, dtype = tf.float64)]], dtype = tf.float64)
         else:    
             self.contents = contents
