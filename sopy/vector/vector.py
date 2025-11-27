@@ -292,6 +292,14 @@ class vector :
              v +=[ component(lattice = lattice).delta(position = position,spacing = spacing)]
         self.contents += [v]
         return self
+    
+    def flat(self, lattices ):
+        v =  [ amplitude(1) ]
+
+        for lattice in lattices:
+             v +=[ component(lattice = lattice).flat()]
+        self.contents += [v]
+        return self
 
     def sample(self, num_samples ):
         sample_ranks = amplitude( contents = self[0] ).sample( num_samples ) 
