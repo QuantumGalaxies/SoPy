@@ -154,7 +154,7 @@ class component :
         return self
 
     def flat(self):
-        norm    = tf.constant(1.0/tf.sqrt(len(self.lattice)), dtype=tf.float64)
+        norm    = 1.0/tf.sqrt(tf.constant(len(self.lattice), dtype=tf.float64))
 
         self.contents =  tf.convert_to_tensor([[  norm for _ in self.lattice ]])            
         return self
