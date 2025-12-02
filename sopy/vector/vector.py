@@ -144,10 +144,16 @@ class vector :
             return q.learn(other, iterate - 1, alpha = alpha )  
 
     def decompose(self, partition , iterate = 0 , alpha = 1e-9):
+        if len(self) < partition:
+            return self
+        
         new = self.max(partition)
         return new.learn( self, iterate = iterate, alpha = alpha)
 
     def fibonacci(self, partition, iterate = 0 , total_iterate = 0, alpha = 1e-9, total_alpha = 1e-9):
+        if len(self) < partition:
+            return self
+        
         Y = vector()
         for like_ranks in self.set(partition=partition):
             Y += like_ranks.decompose(partition = 1, alpha = alpha , iterate = iterate)
