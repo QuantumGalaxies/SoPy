@@ -58,9 +58,9 @@ class amplitude :
     
         Parameters
         ----------
-        q : SoP
-        lattices : dict of lattice positions
-    
+        num_samples : int
+            Number of samples to generate.
+            
         Returns
         -------
         A sample in q
