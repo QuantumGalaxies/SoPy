@@ -12,7 +12,7 @@ import tensorflow as tf
 from bandlimit.gaussian import compute
 pi2 = 6.283185307179586476925286766559005768394338798
 
-class component :
+class Component :
     """
     d > 0 
     """
@@ -24,7 +24,7 @@ class component :
         self.spacing   = lattice[1] - lattice[0]
 
     def copy(self):
-        other = component(lattice = self.lattice, contents = self.contents, transform = self.transform)
+        other = Component(lattice = self.lattice, contents = self.contents, transform = self.transform)
         return other
     
     def __len__(self):
@@ -43,7 +43,7 @@ class component :
 
         return matrix across canon ranks
         """
-        assert isinstance(other, component)
+        assert isinstance(other, Component)
         u = self.values()
         v = other.values()
         return tf.linalg.matmul(u,v, transpose_a = False, transpose_b = True)
@@ -58,7 +58,7 @@ class component :
         return tf.linalg.normalize((self.contents),axis=1)[1]
       
     def add(self, other  ):
-        assert isinstance(other, component)
+        assert isinstance(other, Component)
         u = self.values()
         v = other.values()
         self.contents = tf.concat([u,v],0)
@@ -90,7 +90,7 @@ class component :
 
     def __getitem__(self, r):
         if r < len(self):
-            return component(lattice = self.lattice, contents = [self.contents[r]], transform = self.transform )
+            return Component(lattice = self.lattice, contents = [self.contents[r]], transform = self.transform )
     
     def sample(self, sample_rank, num_samples = 1):
         """

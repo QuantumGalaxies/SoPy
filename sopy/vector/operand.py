@@ -10,7 +10,7 @@
 from .  import vector as v
 
 
-class operand():
+class Operand():
     def __init__(self, re, im):
         assert isinstance( re , v.vector)
         assert isinstance( im , v.vector)
@@ -18,7 +18,7 @@ class operand():
         self.im = im.copy(True)
     
     def copy(self, norm_ = True, threshold = 0.):
-        return operand(self.re.copy(norm_ = norm_, threshold = threshold), self.im.copy(norm_=norm_, threshold = threshold))
+        return Operand(self.re.copy(norm_ = norm_, threshold = threshold), self.im.copy(norm_=norm_, threshold = threshold))
         
     def load(self, real_other, imag_other, partition, threshold):
         assert isinstance( real_other , v.vector)
@@ -164,7 +164,7 @@ class operand():
                 re__ += v.vector().load([new_rank_re]).copy(True)
                 im__ += v.vector().load([new_rank_im]).copy(True)     
 
-        return operand(re__,im__)
+        return Operand(re__,im__)
 
     def exp2(self, alphas, positions):
         """PI_dim < x | compute exp( - 0.5 alphas[dim] (x-positions[dim])^2 ) | x'>"""
@@ -266,7 +266,7 @@ class operand():
                 re__ += v.vector().load([new_rank_re]).copy(True)
                 im__ += v.vector().load([new_rank_im]).copy(True)     
 
-        return operand(re__,im__)
+        return Operand(re__,im__)
 
 
 

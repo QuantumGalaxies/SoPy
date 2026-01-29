@@ -1,6 +1,6 @@
 # Byte-compiled / optimized / DLL files
 examples/paper
-
+.DS_Store
 __pycache__/
 *.py[cod]
 *$py.class

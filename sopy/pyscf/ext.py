@@ -108,7 +108,7 @@ def get_orbital(mol, orb, b, lattices, tolerance = TOL):
     BA = tabulate(mol)
     orb1 = np.transpose(orb)[b]
 
-    Sum = sp.vector()
+    Sum = sp.Vector()
     BA1 = BA.set_index(['bb']).copy()
     BA1['coef'] *= pd.Series(orb1)
     BAG = BA1.groupby(['lx','ly','lz','exp','x','y','z'])['coef'].sum()    
@@ -117,7 +117,7 @@ def get_orbital(mol, orb, b, lattices, tolerance = TOL):
             positions = (x,y,z)
             ls        = (lx,ly,lz)
             sigmas    = np.sqrt(2./np.array([exp,exp,exp]))
-            v = sp.vector().gaussian(ls=ls,positions=positions, sigmas=sigmas, a = coef, lattices = lattices)
+            v = sp.Vector().gaussian(ls=ls,positions=positions, sigmas=sigmas, a = coef, lattices = lattices)
             Sum += v
     return Sum
 
@@ -130,7 +130,7 @@ def get_basis(mol, b, lattices, tolerance = TOL):
     B = len(mol.ao_labels())
     orb1 = np.eye(B)[b]
 
-    Sum = sp.vector()
+    Sum = sp.Vector()
     BA1 = BA.set_index(['bb']).copy()
     BA1['coef'] *= pd.Series(orb1)
     BAG = BA1.groupby(['lx','ly','lz','exp','x','y','z'])['coef'].sum()    
@@ -139,6 +139,6 @@ def get_basis(mol, b, lattices, tolerance = TOL):
             positions = (x,y,z)
             ls        = (lx,ly,lz)
             sigmas    = np.sqrt(2./np.array([exp,exp,exp]))
-            v = sp.vector().gaussian(ls=ls,positions=positions, sigmas=sigmas, a = coef, lattices = lattices)
+            v = sp.Vector().gaussian(ls=ls,positions=positions, sigmas=sigmas, a = coef, lattices = lattices)
             Sum += v
     return Sum

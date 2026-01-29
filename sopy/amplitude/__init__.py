@@ -1,1 +1,1 @@
-from . import amplitude
+from .amplitude import Amplitude

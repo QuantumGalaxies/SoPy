@@ -10,7 +10,7 @@
 
 import tensorflow as tf
 
-class amplitude :
+class Amplitude :
     """
     d = 0
     """
@@ -31,7 +31,7 @@ class amplitude :
         return self
     
     def copy(self):
-        other = amplitude(contents = self.contents)
+        other = Amplitude(contents = self.contents)
         return other
     
     def __len__(self):
@@ -97,7 +97,7 @@ class amplitude :
 
     def __getitem__(self,r):
         if r <  len(self): 
-            return amplitude( contents = [self.contents[r]] )
+            return Amplitude( contents = [self.contents[r]] )
             
     def __imul__(self, m):
         self.contents *= tf.constant(m, dtype= tf.float64)

@@ -1,2 +1,2 @@
-from . import vector
-from . import operand
+from .vector import Vector
+from .operand import Operand

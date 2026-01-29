@@ -7,12 +7,12 @@
 ##           (2023,2024,2025)                 ##
 ################################################
 
-from .. import amplitude
-from .. import component
+from .. import Amplitude
+from .. import Momentum
 import tensorflow as tf
 import numpy as np
 from sklearn.cluster import KMeans
-class vector :
+class Vector :
 
     def __init__(self):
         self.contents = []
@@ -34,14 +34,14 @@ class vector :
         return tf.math.sqrt(self.dot(self))
 
     def boost(self):
-        transforms =[[]]+ [component ( contents = self[d] ,lattice = self.contents[0][d].lattice ).set_boost().transform for d in self.dims(True)]
-        new = vector()
+        transforms =[[]]+ [Momentum ( contents = self[d] ,lattice = self.contents[0][d].lattice ).set_boost().transform for d in self.dims(True)]
+        new = Vector()
         for r in range(len(self)):
             new.contents += [ [self.contents[r][d].copy().set_boost(transform = transforms[d]).boost() for d in self.dims(False)] ]
         return new
         
     def unboost(self):
-        new = vector()
+        new = Vector()
         for r in range(len(self)):
             new.contents += [ [self.contents[r][d].copy().unboost() for d in self.dims(False)] ]
         return new    
@@ -52,7 +52,7 @@ class vector :
 
         norm_=True will not include dim=0
         """
-        assert isinstance(other, vector)
+        assert isinstance(other, Vector)
         if (len(self)>0) and (len(other)>0):
             def innert(vector1, vector2):
                 uv = []
@@ -79,23 +79,23 @@ class vector :
             return tf.constant(0., dtype = tf.float64)
 
     def ref(self ) :
-        other = vector()
+        other = Vector()
         other.contents = self.contents
         return other
 
     
     def copy(self, norm_ = True, threshold = 0):
-        other = vector()
+        other = Vector()
         for rank in self.set(partition = len(self)):
             contents = []
             if norm_:
                 n = rank.n()
                 if n > threshold:
-                        contents = [amplitude(a = n)]
+                        contents = [Amplitude(a = n)]
                 else:
                     continue
             else:
-                contents = [amplitude(contents = rank[0])]
+                contents = [Amplitude(contents = rank[0])]
 
             
             for d in self.dims(True):
@@ -117,26 +117,26 @@ class vector :
         return other
 
     def learn(self, other , iterate = 0, alpha = 1e-9):
-        assert isinstance(other, vector)
+        assert isinstance(other, Vector)
         if (len(other) == 0) or ( len(self) == 0 ) :
-            return vector()
+            return Vector()
         u = self##train
         v = other##origin
         eye = tf.linalg.eye(len(u),dtype = tf.float64)            
-        q = vector()
+        q = Vector()
 
         if self.dims(True) == [1]:
             ##raw sum
-            q.contents = [ [ amplitude(a=1), component(contents = [tf.math.reduce_sum(v[0]*v[1],axis=0)], lattice = self.contents[0][1].lattice) ] ]
+            q.contents = [ [ Amplitude(a=1), Momentum(contents = [tf.math.reduce_sum(v[0]*v[1],axis=0)], lattice = self.contents[0][1].lattice) ] ]
             
             return q.copy(True)
-        comps = [[]]+[ component(contents =tf.linalg.matmul(  
+        comps = [[]]+[ Momentum(contents =tf.linalg.matmul(  
             tf.linalg.inv( u.dot(u,norm_ = True, exclude_dim = target_dim, sum_ = False) + alpha*eye),
             tf.linalg.matmul(u.dot(v,norm_ = True, exclude_dim = target_dim, sum_ = False),
             tf.multiply(v[0],v[target_dim]), transpose_b = False) )
          , lattice = u.contents[0][target_dim].lattice, transform = self.contents[0][target_dim].transform
         ) for target_dim in u.dims(True) ]
-        amps = amplitude(contents = 1./len(u.dims(True))*tf.math.reduce_sum([comps[d].amplitude() for d in u.dims(True) ],axis=0))
+        amps = Amplitude(contents = 1./len(u.dims(True))*tf.math.reduce_sum([comps[d].amplitude() for d in u.dims(True) ],axis=0))
         q.contents = [[ amps[r] ] + [ comps[d][r].normalize() for d in u.dims(True) ] for r in range(len(u)) ]
         if iterate == 0:
             return q
@@ -154,11 +154,24 @@ class vector :
         if len(self) < partition:
             return self
         
-        Y = vector()
+        Y = Vector()
         for like_ranks in self.set(partition=partition):
             Y += like_ranks.decompose(partition = 1, alpha = alpha , iterate = iterate)
         return Y.learn( self, iterate = total_iterate, alpha = total_alpha )
         
+
+    def fibonacci2(self, partition, iterate = 0 , total_iterate = 0, alpha = 1e-9, total_alpha = 1e-9):
+        if len(self) < partition:
+            return self
+        Y = Vector()
+        T = Vector()
+        for like_ranks in self.set(partition=partition):
+            reduced_ranks = like_ranks.decompose(partition = 1, alpha = alpha , iterate = iterate)
+            Y += reduced_ranks
+            T += like_ranks
+            Y.learn( T, iterate = total_iterate, alpha = total_alpha )
+        return Y
+
     
     def dims(self, norm = True):
         """
@@ -197,15 +210,22 @@ class vector :
         kmeans = KMeans(n_clusters=min(len(self), len(other)+1), random_state=42, n_init="auto")
         M = (self+other).dot(other, sum_ = False)
         kmeans.fit( M)
-        new = vector()
+        new = Vector()
         for i in range(len(M)):
             if kmeans.labels_[i] not in kmeans.labels_[len(self):] :
                 new.contents += [ self.contents[i] ] 
         return new
 
     def max(self, num = 1):
+        """
+        max
+                
+        Returns the maximum absolute value Momentum up to 'num' elements.
+        """
+
+
         copy = self.copy(True)
-        new = vector()
+        new = Vector()
         if len(copy)==0:
             return new
 
@@ -228,7 +248,7 @@ class vector :
         return new
 
     def min(self, num = 1):
-        new = vector()
+        new = Vector()
         def modify_tensor(x, i):
             """Modifies q2[0][i][0] using tensor_scatter_nd_update."""
         
@@ -248,9 +268,9 @@ class vector :
     def gaussian(self, a , positions  , sigmas ,ls , lattices):
         lens = [ len(x) for x in [ls,positions,sigmas,lattices]]
         assert min(lens) == max(lens)
-        v =  [ amplitude(a) ]
+        v =  [ Amplitude(a) ]
         for d,(l,position, sigma, lattice) in enumerate(zip( ls, positions, sigmas ,lattices)):
-             v +=[ component(lattice = lattice).gaussian(position = position,sigma = sigma, l = l)]
+             v +=[ Momentum(lattice = lattice).gaussian(position = position,sigma = sigma, l = l)]
         self.contents += [v]
         return self
 
@@ -281,7 +301,7 @@ class vector :
             return new
 
     def __next__(self):
-        new = vector()
+        new = Vector()
         for index in range(len(self)):
             if self.labels[index] == self.index:
                 new.contents += [self.contents[index]]
@@ -293,22 +313,22 @@ class vector :
     def delta(self, a , positions  , spacings, lattices  ):
         lens = [ len(x) for x in [positions,spacings, lattices]]
         assert min(lens) == max(lens)
-        v =  [ amplitude(a) ]
+        v =  [ Amplitude(a) ]
         for d,(position, spacing, lattice) in enumerate(zip( positions, spacings, lattices)):
-             v +=[ component(lattice = lattice).delta(position = position,spacing = spacing)]
+             v +=[ Momentum(lattice = lattice).delta(position = position,spacing = spacing)]
         self.contents += [v]
         return self
     
     def flat(self, lattices ):
-        v =  [ amplitude(1) ]
+        v =  [ Amplitude(1) ]
 
         for lattice in lattices:
-             v +=[ component(lattice = lattice).flat()]
+             v +=[ Momentum(lattice = lattice).flat()]
         self.contents += [v]
         return self
 
     def sample(self, num_samples ):
-        sample_ranks = amplitude( contents = self[0] ).sample( num_samples ) 
+        sample_ranks = Amplitude( contents = self[0] ).sample( num_samples ) 
         return tf.convert_to_tensor([ [ self.contents[r][d].sample(sample_rank=0,num_samples=1) for d in self.dims() ] for r in sample_ranks ])
 
 
@@ -319,8 +339,8 @@ class vector :
         lattices_dict is a dictionary in same key of lattices        
         """
         
-        comps = [ amplitude( contents = tl[0]) ]+ [ component(contents=tl[key], lattice=lattices_dict[key]) for key in tl if key != 0 ]   
-        other = vector()
+        comps = [ Amplitude( contents = tl[0]) ]+ [ Momentum(contents=tl[key], lattice=lattices_dict[key]) for key in tl if key != 0 ]   
+        other = Vector()
         other.contents = [ [ comps[d][r] for d in range(len(comps)) ] for r in range(len(comps[0])) ]
         return other
 
