@@ -63,7 +63,7 @@ First set a lattice,
 
  Multiply operand by exp_i(k ^X ) for k = (1,0)
 
- 	cv = sp.operand( u, sp.Vector() )
+ 	cv = sp.Operand( u, sp.Vector() )
   
   	cv.exp_i([1,0]).cot(cv)
  
