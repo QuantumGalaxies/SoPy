@@ -28,6 +28,9 @@ class Momentum(component.Component):
         # Create a new Momentum instance using the Component's data
         return cls(component_instance.lattice, component_instance.contents, component_instance.transform)
 
+    def __getitem__(self, r):
+        if r < len(self):
+            return Momentum(lattice = self.lattice, contents = [self.contents[r]], transform = self.transform )
 
 
     def copy(self, norm_ = True, threshold = 0):
