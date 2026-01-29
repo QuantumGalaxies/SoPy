@@ -23,7 +23,7 @@ class Momentum(component.Component):
         pass
 
 
-	@classmethod
+    @classmethod
     def from_Component(cls, component_instance):
         # Create a new Momentum instance using the Component's data
         return cls(component_instance.lattice, component_instance.contents, component_instance.transform)
