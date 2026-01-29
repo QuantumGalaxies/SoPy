@@ -12,8 +12,8 @@ from .  import vector as v
 
 class Operand():
     def __init__(self, re, im):
-        assert isinstance( re , v.vector)
-        assert isinstance( im , v.vector)
+        assert isinstance( re , v.Vector)
+        assert isinstance( im , v.Vector)
         self.re = re.copy(True)
         self.im = im.copy(True)
     
@@ -21,8 +21,8 @@ class Operand():
         return Operand(self.re.copy(norm_ = norm_, threshold = threshold), self.im.copy(norm_=norm_, threshold = threshold))
         
     def load(self, real_other, imag_other, partition, threshold):
-        assert isinstance( real_other , v.vector)
-        assert isinstance( imag_other , v.vector)
+        assert isinstance( real_other , v.Vector)
+        assert isinstance( imag_other , v.Vector)
         for rank in real_other.set(partition):
             n   = rank.n()
             if n > threshold:
@@ -35,8 +35,8 @@ class Operand():
         return self
 
     def exp_i(self, ks):
-        re__ = v.vector()
-        im__ = v.vector()
+        re__ = v.Vector()
+        im__ = v.Vector()
 
         signage = 1.0
         #PG.self
@@ -53,8 +53,8 @@ class Operand():
                         new_rank_re += [re]
                         new_rank_im += [im]
     
-                re__ += v.vector().load([new_rank_re]).copy(True)
-                im__ += v.vector().load([new_rank_im]).copy(True)  
+                re__ += v.Vector().load([new_rank_re]).copy(True)
+                im__ += v.Vector().load([new_rank_im]).copy(True)  
             
             for rank in self.im.contents:
                 new_rank_re = []
@@ -67,8 +67,8 @@ class Operand():
                         im,re_m = channel.g(ks[i-1],P=True)
                         new_rank_re += [re_m]
                         new_rank_im += [im]
-                re__ += v.vector().load([new_rank_re]).copy(True)
-                im__ += v.vector().load([new_rank_im]).copy(True)  
+                re__ += v.Vector().load([new_rank_re]).copy(True)
+                im__ += v.Vector().load([new_rank_im]).copy(True)  
 
 
         ## H.self
@@ -84,8 +84,8 @@ class Operand():
                         re,im = channel.h(ks[i-1],poly=False)
                         new_rank_re += [re]
                         new_rank_im += [im]
-                re__ += v.vector().load([new_rank_re]).copy(True)
-                im__ += v.vector().load([new_rank_im]).copy(True)     
+                re__ += v.Vector().load([new_rank_re]).copy(True)
+                im__ += v.Vector().load([new_rank_im]).copy(True)     
                  
             for rank in self.im.contents:
                 new_rank_re = []
@@ -98,8 +98,8 @@ class Operand():
                         im, re_m = channel.h(ks[i-1],poly=False)
                         new_rank_re += [re_m]
                         new_rank_im += [im]
-                re__ += v.vector().load([new_rank_re]).copy(True)
-                im__ += v.vector().load([new_rank_im]).copy(True)     
+                re__ += v.Vector().load([new_rank_re]).copy(True)
+                im__ += v.Vector().load([new_rank_im]).copy(True)     
 
 
         ## kH.self
@@ -115,8 +115,8 @@ class Operand():
                         re,im = channel.h(ks[i-1],poly=True)
                         new_rank_re += [re]
                         new_rank_im += [im]
-                re__ += v.vector().load([new_rank_re]).copy(True)
-                im__ += v.vector().load([new_rank_im]).copy(True)  
+                re__ += v.Vector().load([new_rank_re]).copy(True)
+                im__ += v.Vector().load([new_rank_im]).copy(True)  
     
             for rank in self.im.contents:
                 new_rank_re = []
@@ -129,8 +129,8 @@ class Operand():
                         im, re_m = channel.h(ks[i-1],poly=True)
                         new_rank_re += [re_m]
                         new_rank_im += [im]
-                re__ += v.vector().load([new_rank_re]).copy(True)
-                im__ += v.vector().load([new_rank_im]).copy(True)     
+                re__ += v.Vector().load([new_rank_re]).copy(True)
+                im__ += v.Vector().load([new_rank_im]).copy(True)     
 
             
         ##GP.self
@@ -147,8 +147,8 @@ class Operand():
                         re,im = channel.P().g(ks[i-1])
                         new_rank_re += [re]
                         new_rank_im += [im]
-                re__ += v.vector().load([new_rank_re]).copy(True)
-                im__ += v.vector().load([new_rank_im]).copy(True)     
+                re__ += v.Vector().load([new_rank_re]).copy(True)
+                im__ += v.Vector().load([new_rank_im]).copy(True)     
     
             for rank in self.im.contents:
                 new_rank_re = []
@@ -161,15 +161,15 @@ class Operand():
                         im, re_m = channel.P().g(ks[i-1])
                         new_rank_re += [re_m]
                         new_rank_im += [im]
-                re__ += v.vector().load([new_rank_re]).copy(True)
-                im__ += v.vector().load([new_rank_im]).copy(True)     
+                re__ += v.Vector().load([new_rank_re]).copy(True)
+                im__ += v.Vector().load([new_rank_im]).copy(True)     
 
         return Operand(re__,im__)
 
     def exp2(self, alphas, positions):
         """PI_dim < x | compute exp( - 0.5 alphas[dim] (x-positions[dim])^2 ) | x'>"""
-        re__ = v.vector()
-        im__ = v.vector()
+        re__ = v.Vector()
+        im__ = v.Vector()
 
         signage = 1.0
         #PG2.self
@@ -186,8 +186,8 @@ class Operand():
                         new_rank_re += [re]
                         new_rank_im += [im]
     
-                re__ += v.vector().load([new_rank_re]).copy(True)
-                im__ += v.vector().load([new_rank_im]).copy(True)  
+                re__ += v.Vector().load([new_rank_re]).copy(True)
+                im__ += v.Vector().load([new_rank_im]).copy(True)  
             
             for rank in self.im.contents:
                 new_rank_re = []
@@ -200,8 +200,8 @@ class Operand():
                         im,re_m = channel.g2(alphas[i-1], positions[i-1], P=True)
                         new_rank_re += [re_m]
                         new_rank_im += [im]
-                re__ += v.vector().load([new_rank_re]).copy(True)
-                im__ += v.vector().load([new_rank_im]).copy(True)  
+                re__ += v.Vector().load([new_rank_re]).copy(True)
+                im__ += v.Vector().load([new_rank_im]).copy(True)  
 
 
         ## H2.self
@@ -217,8 +217,8 @@ class Operand():
                         re,im = channel.h2(alphas[i-1], positions[i-1])
                         new_rank_re += [re]
                         new_rank_im += [im]
-                re__ += v.vector().load([new_rank_re]).copy(True)
-                im__ += v.vector().load([new_rank_im]).copy(True)     
+                re__ += v.Vector().load([new_rank_re]).copy(True)
+                im__ += v.Vector().load([new_rank_im]).copy(True)     
                  
             for rank in self.im.contents:
                 new_rank_re = []
@@ -231,8 +231,8 @@ class Operand():
                         im, re_m = channel.h2(alphas[i-1], positions[i-1])
                         new_rank_re += [re_m]
                         new_rank_im += [im]
-                re__ += v.vector().load([new_rank_re]).copy(True)
-                im__ += v.vector().load([new_rank_im]).copy(True)     
+                re__ += v.Vector().load([new_rank_re]).copy(True)
+                im__ += v.Vector().load([new_rank_im]).copy(True)     
 
 
         ##G2P.self
@@ -249,8 +249,8 @@ class Operand():
                         re,im = channel.P().g2(alphas[i-1], positions[i-1])
                         new_rank_re += [re]
                         new_rank_im += [im]
-                re__ += v.vector().load([new_rank_re]).copy(True)
-                im__ += v.vector().load([new_rank_im]).copy(True)     
+                re__ += v.Vector().load([new_rank_re]).copy(True)
+                im__ += v.Vector().load([new_rank_im]).copy(True)     
     
             for rank in self.im.contents:
                 new_rank_re = []
@@ -263,8 +263,8 @@ class Operand():
                         im, re_m = channel.P().g2(alphas[i-1], positions[i-1])
                         new_rank_re += [re_m]
                         new_rank_im += [im]
-                re__ += v.vector().load([new_rank_re]).copy(True)
-                im__ += v.vector().load([new_rank_im]).copy(True)     
+                re__ += v.Vector().load([new_rank_re]).copy(True)
+                im__ += v.Vector().load([new_rank_im]).copy(True)     
 
         return Operand(re__,im__)
 
