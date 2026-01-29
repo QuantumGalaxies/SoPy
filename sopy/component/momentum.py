@@ -59,9 +59,9 @@ class Momentum(component.Component):
         zero = tf.constant(0., tf.float64)
         one  = tf.constant(1., tf.float64)
         k_re = tf.constant(k, dtype = tf.float64)
-        coef = ( (one if k_re >= 0 else one) if not poly else -tf.math.abs(k_re)*self.spacing/c.pi2 )
+        coef = ( (one if k_re >= 0 else one) if not poly else -tf.math.abs(k_re)*self.spacing/component.pi2 )
 
-        if ( abs(k_re) > c.pi2 / self.spacing /2 ):##A
+        if ( abs(k_re) > component.pi2 / self.spacing /2 ):##A
             mul = tf.convert_to_tensor([ tf.complex(zero,zero) for position in tf.constant(self.lattice, dtype = tf.float64) ])
         else:
             mul = tf.convert_to_tensor([ 
@@ -80,9 +80,9 @@ class Momentum(component.Component):
         k_re = tf.constant(k, dtype = tf.float64)
 
         i_m  = tf.complex(zero,-one)
-        coef = ( (-one if k_re >= 0 else one)  )*(self.spacing/c.pi2)
+        coef = ( (-one if k_re >= 0 else one)  )*(self.spacing/component.pi2)
         
-        if ( abs(k_re) > c.pi2 / self.spacing /2):##A
+        if ( abs(k_re) > component.pi2 / self.spacing /2):##A
             mul = tf.convert_to_tensor([ tf.complex(zero,zero) for position in tf.constant(self.lattice, dtype = tf.float64) ])
         else:
             mul = tf.convert_to_tensor([ 
