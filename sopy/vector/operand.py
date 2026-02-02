@@ -7,13 +7,13 @@
 ##           (2023,2024,2025)                 ##
 ################################################
 
-from .  import vector as v
-
+from .  import Vector
+import tensorflow as tf
 
 class Operand():
     def __init__(self, re, im):
-        assert isinstance( re , v.Vector)
-        assert isinstance( im , v.Vector)
+        assert isinstance( re , Vector)
+        assert isinstance( im , Vector)
         self.re = re.copy(True)
         self.im = im.copy(True)
     
@@ -21,8 +21,8 @@ class Operand():
         return Operand(self.re.copy(norm_ = norm_, threshold = threshold), self.im.copy(norm_=norm_, threshold = threshold))
         
     def load(self, real_other, imag_other, partition, threshold):
-        assert isinstance( real_other , v.Vector)
-        assert isinstance( imag_other , v.Vector)
+        assert isinstance( real_other , Vector)
+        assert isinstance( imag_other , Vector)
         for rank in real_other.set(partition):
             n   = rank.n()
             if n > threshold:
@@ -34,9 +34,38 @@ class Operand():
                 self.im += rank.copy(norm_=True, threshold = threshold)
         return self
 
+    def transform(self, tss, partition, threshold):
+        new_re = Vector()
+        new_im = Vector()
+        for rank in self.re.set(partition):
+            amp   = rank.n()
+            if amp > threshold:        
+                for d,space in enumerate(self.dims(True)):
+                    rank_add = rank.copy()
+                    rank_add.contents[0][space] = tf.math.real(tf.matmul(ft1, rank[space][0], adjoint_a=True))
+                    new_re += rank.copy(threshold = threshold)
+                    
+                    rank_add = rank.copy()
+                    rank_add.contents[0][space] = tf.math.imag(tf.matmul(ft1, rank[space][0], adjoint_a=True))
+                    new_im += rank.copy(threshold = threshold)
+
+        for rank in self.im.set(partition):
+            amp   = rank.n()
+            if amp > threshold:        
+                for d,space in enumerate(self.dims(True)):
+                    rank_add = rank.copy()
+                    rank_add.contents[0][space] = tf.math.real(tf.matmul(ft1, rank[space][0], adjoint_a=True))
+                    new_im += rank.copy(threshold = threshold)
+                    
+                    rank_add = rank.copy()
+                    rank_add.contents[0][space] = -tf.math.imag(tf.matmul(ft1, rank[space][0], adjoint_a=True))
+                    new_re += rank.copy(threshold = threshold)
+        return Operand( new_re, new_im )
+        
+        
     def exp_i(self, ks):
-        re__ = v.Vector()
-        im__ = v.Vector()
+        re__ = Vector()
+        im__ = Vector()
 
         signage = 1.0
         #PG.self
@@ -53,8 +82,8 @@ class Operand():
                         new_rank_re += [re]
                         new_rank_im += [im]
     
-                re__ += v.Vector().load([new_rank_re]).copy(True)
-                im__ += v.Vector().load([new_rank_im]).copy(True)  
+                re__ += Vector().load([new_rank_re]).copy(True)
+                im__ += Vector().load([new_rank_im]).copy(True)  
             
             for rank in self.im.contents:
                 new_rank_re = []
@@ -67,8 +96,8 @@ class Operand():
                         im,re_m = channel.g(ks[i-1],P=True)
                         new_rank_re += [re_m]
                         new_rank_im += [im]
-                re__ += v.Vector().load([new_rank_re]).copy(True)
-                im__ += v.Vector().load([new_rank_im]).copy(True)  
+                re__ += Vector().load([new_rank_re]).copy(True)
+                im__ += Vector().load([new_rank_im]).copy(True)  
 
 
         ## H.self
@@ -84,8 +113,8 @@ class Operand():
                         re,im = channel.h(ks[i-1],poly=False)
                         new_rank_re += [re]
                         new_rank_im += [im]
-                re__ += v.Vector().load([new_rank_re]).copy(True)
-                im__ += v.Vector().load([new_rank_im]).copy(True)     
+                re__ += Vector().load([new_rank_re]).copy(True)
+                im__ += Vector().load([new_rank_im]).copy(True)     
                  
             for rank in self.im.contents:
                 new_rank_re = []
@@ -98,8 +127,8 @@ class Operand():
                         im, re_m = channel.h(ks[i-1],poly=False)
                         new_rank_re += [re_m]
                         new_rank_im += [im]
-                re__ += v.Vector().load([new_rank_re]).copy(True)
-                im__ += v.Vector().load([new_rank_im]).copy(True)     
+                re__ += Vector().load([new_rank_re]).copy(True)
+                im__ += Vector().load([new_rank_im]).copy(True)     
 
 
         ## kH.self
@@ -115,8 +144,8 @@ class Operand():
                         re,im = channel.h(ks[i-1],poly=True)
                         new_rank_re += [re]
                         new_rank_im += [im]
-                re__ += v.Vector().load([new_rank_re]).copy(True)
-                im__ += v.Vector().load([new_rank_im]).copy(True)  
+                re__ += Vector().load([new_rank_re]).copy(True)
+                im__ += Vector().load([new_rank_im]).copy(True)  
     
             for rank in self.im.contents:
                 new_rank_re = []
@@ -129,8 +158,8 @@ class Operand():
                         im, re_m = channel.h(ks[i-1],poly=True)
                         new_rank_re += [re_m]
                         new_rank_im += [im]
-                re__ += v.Vector().load([new_rank_re]).copy(True)
-                im__ += v.Vector().load([new_rank_im]).copy(True)     
+                re__ += Vector().load([new_rank_re]).copy(True)
+                im__ += Vector().load([new_rank_im]).copy(True)     
 
             
         ##GP.self
@@ -147,8 +176,8 @@ class Operand():
                         re,im = channel.P().g(ks[i-1])
                         new_rank_re += [re]
                         new_rank_im += [im]
-                re__ += v.Vector().load([new_rank_re]).copy(True)
-                im__ += v.Vector().load([new_rank_im]).copy(True)     
+                re__ += Vector().load([new_rank_re]).copy(True)
+                im__ += Vector().load([new_rank_im]).copy(True)     
     
             for rank in self.im.contents:
                 new_rank_re = []
@@ -161,15 +190,15 @@ class Operand():
                         im, re_m = channel.P().g(ks[i-1])
                         new_rank_re += [re_m]
                         new_rank_im += [im]
-                re__ += v.Vector().load([new_rank_re]).copy(True)
-                im__ += v.Vector().load([new_rank_im]).copy(True)     
+                re__ += Vector().load([new_rank_re]).copy(True)
+                im__ += Vector().load([new_rank_im]).copy(True)     
 
         return Operand(re__,im__)
 
     def exp2(self, alphas, positions):
         """PI_dim < x | compute exp( - 0.5 alphas[dim] (x-positions[dim])^2 ) | x'>"""
-        re__ = v.Vector()
-        im__ = v.Vector()
+        re__ = Vector()
+        im__ = Vector()
 
         signage = 1.0
         #PG2.self
@@ -186,8 +215,8 @@ class Operand():
                         new_rank_re += [re]
                         new_rank_im += [im]
     
-                re__ += v.Vector().load([new_rank_re]).copy(True)
-                im__ += v.Vector().load([new_rank_im]).copy(True)  
+                re__ += Vector().load([new_rank_re]).copy(True)
+                im__ += Vector().load([new_rank_im]).copy(True)  
             
             for rank in self.im.contents:
                 new_rank_re = []
@@ -200,8 +229,8 @@ class Operand():
                         im,re_m = channel.g2(alphas[i-1], positions[i-1], P=True)
                         new_rank_re += [re_m]
                         new_rank_im += [im]
-                re__ += v.Vector().load([new_rank_re]).copy(True)
-                im__ += v.Vector().load([new_rank_im]).copy(True)  
+                re__ += Vector().load([new_rank_re]).copy(True)
+                im__ += Vector().load([new_rank_im]).copy(True)  
 
 
         ## H2.self
@@ -217,8 +246,8 @@ class Operand():
                         re,im = channel.h2(alphas[i-1], positions[i-1])
                         new_rank_re += [re]
                         new_rank_im += [im]
-                re__ += v.Vector().load([new_rank_re]).copy(True)
-                im__ += v.Vector().load([new_rank_im]).copy(True)     
+                re__ += Vector().load([new_rank_re]).copy(True)
+                im__ += Vector().load([new_rank_im]).copy(True)     
                  
             for rank in self.im.contents:
                 new_rank_re = []
@@ -231,8 +260,8 @@ class Operand():
                         im, re_m = channel.h2(alphas[i-1], positions[i-1])
                         new_rank_re += [re_m]
                         new_rank_im += [im]
-                re__ += v.Vector().load([new_rank_re]).copy(True)
-                im__ += v.Vector().load([new_rank_im]).copy(True)     
+                re__ += Vector().load([new_rank_re]).copy(True)
+                im__ += Vector().load([new_rank_im]).copy(True)     
 
 
         ##G2P.self
@@ -249,8 +278,8 @@ class Operand():
                         re,im = channel.P().g2(alphas[i-1], positions[i-1])
                         new_rank_re += [re]
                         new_rank_im += [im]
-                re__ += v.Vector().load([new_rank_re]).copy(True)
-                im__ += v.Vector().load([new_rank_im]).copy(True)     
+                re__ += Vector().load([new_rank_re]).copy(True)
+                im__ += Vector().load([new_rank_im]).copy(True)     
     
             for rank in self.im.contents:
                 new_rank_re = []
@@ -263,8 +292,8 @@ class Operand():
                         im, re_m = channel.P().g2(alphas[i-1], positions[i-1])
                         new_rank_re += [re_m]
                         new_rank_im += [im]
-                re__ += v.Vector().load([new_rank_re]).copy(True)
-                im__ += v.Vector().load([new_rank_im]).copy(True)     
+                re__ += Vector().load([new_rank_re]).copy(True)
+                im__ += Vector().load([new_rank_im]).copy(True)     
 
         return Operand(re__,im__)
 
