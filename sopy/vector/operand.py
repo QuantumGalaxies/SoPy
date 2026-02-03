@@ -34,7 +34,7 @@ class Operand():
                 self.im += rank.copy(norm_=True, threshold = threshold)
         return self
 
-    def transform(self, tss, partition, threshold):
+    def transform(self, lattices, tss, partition, threshold):
         """
         tss = [ {1:op1_1, 2:op2_1},{1:op1_2, 2:op2_2},{1:op1_3, 2:op2_3},...]
         
@@ -53,8 +53,8 @@ class Operand():
                     else:
                        contents_r += [rank.contents[0][space]]
                        
-                new_re += Vector(lattices=rank.lattices, contents=contents_r ).copy(threshold = threshold)
-                new_im += Vector(lattices=rank.lattices, contents=contents_i ).copy(threshold = threshold)
+                new_re += Vector(lattices=lattices, contents=contents_r ).copy(threshold = threshold)
+                new_im += Vector(lattices=lattices, contents=contents_i ).copy(threshold = threshold)
         
         for rank in self.im.set(partition):
             for ts in tss:
@@ -67,8 +67,8 @@ class Operand():
                     else:
                        contents_i += [rank.contents[0][space]]
 
-                new_re += Vector(lattices=rank.lattices, contents=contents_r ).copy(threshold = threshold)
-                new_im += Vector(lattices=rank.lattices, contents=contents_i ).copy(threshold = threshold)
+                new_re += Vector(lattices=lattices, contents=contents_r ).copy(threshold = threshold)
+                new_im += Vector(lattices=lattices, contents=contents_i ).copy(threshold = threshold)
                 
         return Operand( new_re, new_im )
         
