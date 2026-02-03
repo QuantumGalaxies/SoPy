@@ -51,6 +51,6 @@ def image(q ):
     """
     weight = tf.reshape(q[0],-1)
     factors = []
-    for space in range(1,len(q)):
+    for space in q.dims(True):
         factors += [ tf.transpose(q[space]) ]
     return tl.cp_to_tensor((weight,factors))
