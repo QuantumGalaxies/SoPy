@@ -44,8 +44,8 @@ class Operand():
         for rank in self.re.set(partition):
             amp   = rank.n()
             for ts in tss:
-                contents_r = [rank.contents[0][0]]
-                contents_i = [rank.contents[0][0]]
+                contents_r = [[1.]]]
+                contents_i = [[1.]]]
                 for d,space in enumerate(self.re.dims(True)):
                     if space in ts:
                        contents_r += [tf.math.real(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
@@ -58,8 +58,8 @@ class Operand():
         
         for rank in self.im.set(partition):
             for ts in tss:
-                contents_r = [rank.contents[0][0]]
-                contents_i = [rank.contents[0][0]]
+                contents_r = [[1.]]]
+                contents_i = [[1.]]]
                 for d,space in enumerate(self.im.dims(True)):
                     if space in ts:
                         contents_r += [-tf.math.imag(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
