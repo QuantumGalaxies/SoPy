@@ -63,7 +63,7 @@ class Operand():
                 for d,space in enumerate(self.im.dims(True)):
                     if space in ts:
                         contents_r += [-tf.math.imag(tf.matmul(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
-                        contents_i += [ tf.math.real(tf.matmul(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True)))]
+                        contents_i += [ tf.math.real(tf.matmul(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
                     else:
                        contents_i += [rank.contents[0][space]]
 
