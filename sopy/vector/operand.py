@@ -53,8 +53,8 @@ class Operand():
                     else:
                        contents_r[space] = rank.contents[0][space]
                        
-                new_re += Vector().transpose( contents_r, { d+1: lattices[d] for d in range(space)}).copy(threshold = threshold)
-                new_im += Vector().transpose( contents_i, { d+1: lattices[d] for d in range(space)}).copy(threshold = threshold)
+                new_re += Vector().transpose( contents_r, { d+1: lattices[d] for d in range(space)})
+                new_im += Vector().transpose( contents_i, { d+1: lattices[d] for d in range(space)})
         
         for rank in self.im.set(partition):
             for ts in tss:
@@ -67,8 +67,8 @@ class Operand():
                     else:
                        contents_r[space] = rank.contents[0][space]
 
-                new_re += Vector().transpose( contents_r, { d+1: lattices[d] for d in range(space)}).copy(threshold = threshold)
-                new_im += Vector().transpose( contents_i, { d+1: lattices[d] for d in range(space)}).copy(threshold = threshold)
+                new_re += Vector().transpose( contents_r, { d+1: lattices[d] for d in range(space)})
+                new_im += Vector().transpose( contents_i, { d+1: lattices[d] for d in range(space)})
                 
         return Operand( new_re, new_im )
         
