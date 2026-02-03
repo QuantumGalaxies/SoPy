@@ -41,7 +41,8 @@ class Operand():
         """
         new_re = Vector()
         new_im = Vector()
-        for rank in self.re.set(partition):
+        if len( self.re ) > 0 :
+          for rank in self.re.set(partition):
             amp   = rank.n()
             for ts in tss:
                 contents_r = {0:rank[0].numpy()}
@@ -55,8 +56,8 @@ class Operand():
                        
                 new_re += Vector().transpose( contents_r, { d+1: lattices[d] for d in range(space)})
                 new_im += Vector().transpose( contents_i, { d+1: lattices[d] for d in range(space)})
-        
-        for rank in self.im.set(partition):
+        if len( self.im ) > 0 :
+          for rank in self.im.set(partition):
             for ts in tss:
                 contents_r = {0:rank[0].numpy()}
                 contents_i = {0:rank[0].numpy()}
