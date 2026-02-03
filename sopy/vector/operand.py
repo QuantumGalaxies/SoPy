@@ -35,31 +35,40 @@ class Operand():
         return self
 
     def transform(self, tss, partition, threshold):
+        """
+        tss = [ {1:op1_1, 2:op2_1},{1:op1_2, 2:op2_2},{1:op1_3, 2:op2_3},...]
+        
+        """
         new_re = Vector()
         new_im = Vector()
         for rank in self.re.set(partition):
             amp   = rank.n()
-            if amp > threshold:        
+            for ts in tss:
+                contents_r = [rank.contents[0][0]]
+                contents_i = [rank.contents[0][0]]
                 for d,space in enumerate(self.dims(True)):
-                    rank_add = rank.copy()
-                    rank_add.contents[0][space] = tf.math.real(tf.matmul(ft1, rank[space][0], adjoint_a=True))
-                    new_re += rank.copy(threshold = threshold)
-                    
-                    rank_add = rank.copy()
-                    rank_add.contents[0][space] = tf.math.imag(tf.matmul(ft1, rank[space][0], adjoint_a=True))
-                    new_im += rank.copy(threshold = threshold)
+                    if space in ts:
+                       contents_r += [tf.math.real(tf.matmul(ts[space], rank[space][0], adjoint_a=True))]
+                       contents_i += [tf.math.imag(tf.matmul(ts[space], rank[space][0], adjoint_a=True))]
+                    else:
+                       contents_r += [rank.contents[0][space]]
+                       
+                new_re += Vector(lattices=rank.lattices, contents=contents_r ).copy(threshold = threshold)
+                new_im += Vector(lattices=rank.lattices, contents=contents_i ).copy(threshold = threshold)
 
-        for rank in self.im.set(partition):
-            amp   = rank.n()
-            if amp > threshold:        
+            for ts in tss:
+                contents_r = [rank.contents[0][0]]
+                contents_i = [rank.contents[0][0]]
                 for d,space in enumerate(self.dims(True)):
-                    rank_add = rank.copy()
-                    rank_add.contents[0][space] = tf.math.real(tf.matmul(ft1, rank[space][0], adjoint_a=True))
-                    new_im += rank.copy(threshold = threshold)
-                    
-                    rank_add = rank.copy()
-                    rank_add.contents[0][space] = -tf.math.imag(tf.matmul(ft1, rank[space][0], adjoint_a=True))
-                    new_re += rank.copy(threshold = threshold)
+                    if space in ts:
+                        contents_r += [-tf.math.imag(tf.matmul(ts[space], rank[space][0], adjoint_a=True))]
+                        contents_i += [ tf.math.real(tf.matmul(ts[space], rank[space][0], adjoint_a=True))]
+                    else:
+                       contents_i += [rank.contents[0][space]]
+
+                new_re += Vector(lattices=rank.lattices, contents=contents_r ).copy(threshold = threshold)
+                new_im += Vector(lattices=rank.lattices, contents=contents_i ).copy(threshold = threshold)
+                
         return Operand( new_re, new_im )
         
         
