@@ -44,28 +44,28 @@ class Operand():
         for rank in self.re.set(partition):
             amp   = rank.n()
             for ts in tss:
-                contents_r = rank[0].numpy()
-                contents_i = rank[0].numpy()
+                contents_r = {0:rank[0].numpy()}
+                contents_i = {0:rank[0].numpy()}
                 for d,space in enumerate(self.re.dims(True)):
                     if space in ts:
-                       contents_r += [tf.math.real(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
-                       contents_i += [tf.math.imag(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
+                       contents_r[space] = tf.math.real(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))
+                       contents_i[space] = tf.math.imag(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))
                     else:
-                       contents_r += [rank.contents[0][space]]
+                       contents_r[space] = rank.contents[0][space]
                        
                 new_re += Vector().transpose( contents_r, { d+1: lattices[d] for d in range(space)}).copy(threshold = threshold)
                 new_im += Vector().transpose( contents_i, { d+1: lattices[d] for d in range(space)}).copy(threshold = threshold)
         
         for rank in self.im.set(partition):
             for ts in tss:
-                contents_r = rank[0].numpy()
-                contents_i = rank[0].numpy()
+                contents_r = {0:rank[0].numpy()}
+                contents_i = {0:rank[0].numpy()}
                 for d,space in enumerate(self.im.dims(True)):
                     if space in ts:
-                        contents_r += [-tf.math.imag(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
-                        contents_i += [ tf.math.real(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
+                        contents_r[space] = -tf.math.imag(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))
+                        contents_i[space] =  tf.math.real(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))
                     else:
-                       contents_i += [rank.contents[0][space]]
+                       contents_r[space] = rank.contents[0][space]
 
                 new_re += Vector().transpose( contents_r, { d+1: lattices[d] for d in range(space)}).copy(threshold = threshold)
                 new_im += Vector().transpose( contents_i, { d+1: lattices[d] for d in range(space)}).copy(threshold = threshold)
