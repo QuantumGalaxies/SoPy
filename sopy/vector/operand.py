@@ -48,8 +48,8 @@ class Operand():
                 contents_i = [rank.contents[0][0]]
                 for d,space in enumerate(self.re.dims(True)):
                     if space in ts:
-                       contents_r += [tf.math.real(tf.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
-                       contents_i += [tf.math.imag(tf.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
+                       contents_r += [tf.math.real(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
+                       contents_i += [tf.math.imag(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
                     else:
                        contents_r += [rank.contents[0][space]]
                        
@@ -62,8 +62,8 @@ class Operand():
                 contents_i = [rank.contents[0][0]]
                 for d,space in enumerate(self.im.dims(True)):
                     if space in ts:
-                        contents_r += [-tf.math.imag(tf.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
-                        contents_i += [ tf.math.real(tf.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
+                        contents_r += [-tf.math.imag(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
+                        contents_i += [ tf.math.real(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
                     else:
                        contents_i += [rank.contents[0][space]]
 
