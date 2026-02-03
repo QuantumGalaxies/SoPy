@@ -46,7 +46,7 @@ class Operand():
             for ts in tss:
                 contents_r = [rank.contents[0][0]]
                 contents_i = [rank.contents[0][0]]
-                for d,space in enumerate(self.dims(True)):
+                for d,space in enumerate(self.re.dims(True)):
                     if space in ts:
                        contents_r += [tf.math.real(tf.matmul(ts[space], rank[space][0], adjoint_a=True))]
                        contents_i += [tf.math.imag(tf.matmul(ts[space], rank[space][0], adjoint_a=True))]
@@ -55,11 +55,12 @@ class Operand():
                        
                 new_re += Vector(lattices=rank.lattices, contents=contents_r ).copy(threshold = threshold)
                 new_im += Vector(lattices=rank.lattices, contents=contents_i ).copy(threshold = threshold)
-
+        
+        for rank in self.im.set(partition):
             for ts in tss:
                 contents_r = [rank.contents[0][0]]
                 contents_i = [rank.contents[0][0]]
-                for d,space in enumerate(self.dims(True)):
+                for d,space in enumerate(self.im.dims(True)):
                     if space in ts:
                         contents_r += [-tf.math.imag(tf.matmul(ts[space], rank[space][0], adjoint_a=True))]
                         contents_i += [ tf.math.real(tf.matmul(ts[space], rank[space][0], adjoint_a=True))]
