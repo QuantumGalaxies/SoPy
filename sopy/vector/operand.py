@@ -66,7 +66,7 @@ class Operand():
                         contents_r[space] = [-tf.math.imag(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
                         contents_i[space] = [ tf.math.real(tf.linalg.matvec(ts[space], tf.cast(rank[space][0], dtype=ts[space].dtype), adjoint_a=True))]
                     else:
-                       contents_r[space] = rank.contents[0][space]
+                       contents_i[space] = rank.contents[0][space]
 
                 new_re += Vector().transpose( contents_r, { space: lattices[d] for d,space  in enumerate(self.im.dims(True))})
                 new_im += Vector().transpose( contents_i, { space: lattices[d] for d,space  in enumerate(self.im.dims(True))})
