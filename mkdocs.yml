@@ -1,0 +1,13 @@
+site_name: "SoPy: Quantum Galaxies"
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: cyan
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Core Concepts: architecture.md
+  - Tutorials: tutorials.md
+  - API Reference: api.md

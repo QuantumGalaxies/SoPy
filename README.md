@@ -1,6 +1,8 @@
 # Sums Of Product
 ## SoPy
 
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/sopy-quantum?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/sopy-quantum)
+
 ## Sums of Products for data and science
 
 ### Conceptual

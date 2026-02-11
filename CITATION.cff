@@ -1,28 +1,28 @@
 cff-version: 1.2.0
 title: sopy-quantum
 message: >-
-  If you use this software, please cite it using the
-  metadata from this file.
+  If you use this software, please cite it using the
+  metadata from this file.
 type: software
 authors:
-  - given-names: Jonathan
-    family-names: Jerke
-    email: jonathan@quantumgalaxies.org
-    affiliation: Quantum Galaxies Corp
-    orcid: 'https://orcid.org/0000-0002-2449-4848'
+  - given-names: Jonathan
+    family-names: Jerke
+    email: jonathan@quantumgalaxies.org
+    affiliation: Quantum Galaxies Corp
+    orcid: 'https://orcid.org/0000-0002-2449-4848'
 repository-code: 'https://github.com/QuantumGalaxies/SoPy'
 url: 'https://pypi.org/project/sopy-quantum/'
 abstract: >-
-  sopy-quantum is a Python library tailored for the efficient 
-  calculation and manipulation of Sums of Products (SoP) in 
-  quantum mechanical systems. It provides a lightweight and
-  open-source alternative using TensorFlow.
+  sopy-quantum is a Python library tailored for the efficient 
+  calculation and manipulation of Sums of Products (SoP) in 
+  quantum mechanical systems. It provides a lightweight and
+  open-source alternative using TensorFlow.
 keywords:
-  - quantum-physics
-  - quantum-mechanics
-  - sum-of-products
-  - python
-  - scientific-computing
+  - quantum-physics
+  - quantum-mechanics
+  - sum-of-products
+  - python
+  - scientific-computing
   - TensorFlow
 license: MIT
 version: 1.0.0  # Update this to match your current PyPI version
