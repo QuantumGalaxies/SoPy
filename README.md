@@ -12,6 +12,8 @@ Let multidimensional distributions be handled in the new-old fashion way... Meth
 Since 2018, we have been aware that Coulomb and other functions can be written in SoP ways, but thats the published secret sauce.
 We simply are publishing our best understanding of how the SoP vector should be decomposed.  Including some tricks which have not seen the light of day before that fundamentally improve the process, see Fibonacci.
 
+Recent additions to this package allow you to treat your data, gaussians, as operators; or compute the multiplication of exp_i-k^X by your dataset while maintaining separated dimensions!
+
 Expect a paper to be published when time can be found to do so.
 
 ### How to install
