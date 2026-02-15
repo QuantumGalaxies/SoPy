@@ -18,7 +18,7 @@ class Component :
     """
 
     def __init__ (self, lattice , contents = [], transform = [] ):
-        self.contents = contents
+        self.contents  = tf.convert_to_tensor(contents, dtype=tf.float64)
         self.transform = transform
         self.lattice   = lattice
         self.spacing   = lattice[1] - lattice[0]

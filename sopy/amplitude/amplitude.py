@@ -19,7 +19,7 @@ class Amplitude :
         if len(contents)==0:
             self.contents = tf.convert_to_tensor([[tf.constant(a, dtype = tf.float64)]], dtype = tf.float64)
         else:    
-            self.contents = contents
+            self.contents = tf.convert_to_tensor(contents, dtype = tf.float64 )
         
     def boost(self):
         return self
