@@ -21,12 +21,20 @@ class Operand():
     def copy(self, norm_ = True, threshold = 0.):
         return Operand(self.re.copy(norm_ = norm_, threshold = threshold), self.im.copy(norm_=norm_, threshold = threshold))
         
-    def complex1(self,  ctl1, ext_i, dict_lattices, mask = [] ):
+        
+    def dict_lattices(self):
+        re = self.re
+        return { space  : re.contents[0][space].lattice for space in re.dims(True) }
+        
+        
+    def complex1(self,  ctl1, ext_i, mask = [] ):
         """
         one rank
         2**D terms max
         """
         dims = len(ctl1)
+        dict_lattices = self.dict_lattices()
+        
         assert dims == len(self.re.dims(False))
         re1 = Vector()
         im1 = Vector()
@@ -120,7 +128,7 @@ class Operand():
                        re_momentum, im_momentum = rank.contents[0][space].P().g(ks[d])
                        ctl1[space] = [-1.0*(tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128))]
 
-                re1, im1 = self.complex1(ctl1, ext_i = 0, dict_lattices = dict_lattices, mask = mask)
+                re1, im1 = self.complex1(ctl1, ext_i = 0, mask = mask)
                 re += re1
                 im += im1
 
@@ -145,7 +153,7 @@ class Operand():
                        re_momentum, im_momentum = rank.contents[0][space].P().g(ks[d])
                        ctl1[space] = [-1.0*(tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128))]
 
-                re1, im1 = self.complex1(ctl1, ext_i = 1, dict_lattices = dict_lattices, mask = mask)
+                re1, im1 = self.complex1(ctl1, ext_i = 1, mask = mask)
                 re += re1
                 im += im1
         return Operand( re, im)
@@ -179,7 +187,7 @@ class Operand():
                        re_momentum, im_momentum = rank.contents[0][space].P().g2(alphas[d], positions[d])
                        ctl1[space] = [-(tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128))]
 
-                re1, im1 = self.complex1( ctl1, ext_i = 0, dict_lattices = dict_lattices, mask = mask)
+                re1, im1 = self.complex1( ctl1, ext_i = 0, mask = mask)
                 re += re1
                 im += im1
 
@@ -201,7 +209,7 @@ class Operand():
                        re_momentum, im_momentum = rank.contents[0][space].P().g2(alphas[d], positions[d])
                        ctl1[space] = [-(tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128))]
 
-                re1, im1 = self.complex1( ctl1, ext_i = 1, dict_lattices = dict_lattices, mask = mask)
+                re1, im1 = self.complex1( ctl1, ext_i = 1, mask = mask)
                 re += re1
                 im += im1
         return Operand( re, im)
