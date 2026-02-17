@@ -20,297 +20,195 @@ class Operand():
     def copy(self, norm_ = True, threshold = 0.):
         return Operand(self.re.copy(norm_ = norm_, threshold = threshold), self.im.copy(norm_=norm_, threshold = threshold))
         
-    def load(self, real_other, imag_other, partition, threshold):
-        assert isinstance( real_other , Vector)
-        assert isinstance( imag_other , Vector)
-        for rank in real_other.set(partition):
-            n   = rank.n()
-            if n > threshold:
-                self.re += rank.copy(norm_=True, threshold = threshold)
-    
-        for rank in imag_other.set(partition):
-            n   = rank.n()
-            if n > threshold:
-                self.im += rank.copy(norm_=True, threshold = threshold)
-        return self
+    def complex1(self,  ctl1, ext_i, dict_lattices, mask = [] ):
+        """
+        one rank
+        2**D terms max
+        """
+        dims = len(ctl1)
+        assert dims == len(self.re.dims(False))
+        re1 = Vector()
+        im1 = Vector()
+        dim_list = ([[0,1]]*dims)
+        for seq in itertools.product( * dim_list):
+            dict_ar = {}
+            for space, link in enumerate( seq ):
+                dict_ar[space] = tf.cast([ tf.math.imag( ctl1[space][0] ) if (link == 1) and ( space not in mask ) else tf.math.real( ctl1[space][0] ) ], dtype = tf.float64)
 
-    def transform(self, lattices, tss):
+            if ((sum(seq)+ext_i) % 4) == 0:
+                re1 += Vector().transpose( dict_ar, dict_lattices ) 
+            if ((sum(seq)+ext_i) % 4) == 1:
+                im1 += Vector().transpose( dict_ar, dict_lattices ) 
+            if ((sum(seq)+ext_i) % 4 ) == 2:
+                dict_ar[0] *= -1.0
+                re1 += Vector().transpose( dict_ar, dict_lattices ) 
+            if ((sum(seq)+ext_i)  % 4) == 3:
+                dict_ar[0] *= -1.0
+                im1 += Vector().transpose( dict_ar, dict_lattices ) 
+        return ( re1, im1 )
+
+
+    def transform(self, dict_lattices, tss, partition_re, partition_im):
         """
         tss = [ {1:op1_1, 2:op2_1},{1:op1_2, 2:op2_2},{1:op1_3, 2:op2_3},...]
         
         """
-        new_re = Vector()
-        new_im = Vector()
+        ctl1 = {}
+        re = Vector()
+        im = Vector()
         if len( self.re ) > 0 :
-          for rank in self.re.set(len(self.re)):
-            amp   = rank.n()
+          for rank in self.re.set(partition_re):
+            mask = [0]
             for ts in tss:
-                contents_r = {0:rank[0].numpy()}
-                contents_i = {0:rank[0].numpy()}
+                ctl1[0] = tf.convert_to_tensor( [rank[0][0]] ,dtype=tf.complex128)
                 for d,space in enumerate(self.re.dims(True)):
                     if space in ts:
-                       contents_r[space] = [tf.linalg.matvec(tf.cast(tf.math.real(ts[space]), tf.float64), rank[space][0], adjoint_a=True)]
-                       contents_i[space] = [tf.linalg.matvec(tf.cast(tf.math.imag(ts[space]), tf.float64), rank[space][0], adjoint_a=True)]
+                       ctl1[space] =([tf.linalg.matvec(ts[space], tf.cast(rank[space][0], tf.complex128), adjoint_a=True)])
                     else:
-                       contents_r[space] = rank[space][0]
-                       contents_i[space] = rank[space][0]
+                       ctl1[space] = tf.convert_to_tensor([rank[space][0]], dtype= tf.complex128)
+                       mask += [space]
 
-                new_re += Vector().transpose( contents_r, { space: lattices[d] for d,space in enumerate(self.re.dims(True))})
-                new_im += Vector().transpose( contents_i, { space: lattices[d] for d,space  in enumerate(self.re.dims(True))})
+            re1, im1 = self.complex1( ctl1, ext_i = 0, dict_lattices = dict_lattices, mask = mask)
+            re += re1
+            im += im1
         if len( self.im ) > 0 :
-          for rank in self.im.set(len(self.im)):
+          for rank in self.im.set(partition_im):
+            mask = [0]
             for ts in tss:
-                contents_r = {0:rank[0].numpy()}
-                contents_i = {0:rank[0].numpy()}
+                ctl1[0] = tf.convert_to_tensor( [rank[0][0]] ,dtype=tf.complex128)
                 for d,space in enumerate(self.im.dims(True)):
                     if space in ts:
-                        contents_r[space] = [-tf.linalg.matvec(tf.cast(tf.math.imag(ts[space]), tf.float64), rank[space][0], adjoint_a=True)]
-                        contents_i[space] = [ tf.linalg.matvec(tf.cast(tf.math.real(ts[space]), tf.float64), rank[space][0], adjoint_a=True)]
+                       ctl1[space] = ([tf.linalg.matvec(ts[space], tf.cast(rank[space][0], tf.complex128), adjoint_a=True)])
                     else:
-                       contents_r[space] = rank[space][0]
-                       contents_i[space] = rank[space][0]
+                       ctl1[space] = tf.convert_to_tensor([rank[space][0]], dtype = tf.float128)
+                       mask += [space]
 
-                new_re += Vector().transpose( contents_r, { space: lattices[d] for d,space  in enumerate(self.im.dims(True))})
-                new_im += Vector().transpose( contents_i, { space: lattices[d] for d,space  in enumerate(self.im.dims(True))})
-                
-        return Operand( new_re, new_im )
-        
-        
+            re1, im1 = self.im.complex1( ctl1, ext_i = 1, dict_lattices = dict_lattices,mask= mask)
+            re += re1
+            im += im1
+        return Operand( re, im)
+
     def exp_i(self, ks):
-        re__ = Vector()
-        im__ = Vector()
+        """  
+        cascade operators across dimensions in direct product
+         exp( - ks[dim]*x )| x'>
+        """
+        partition_re = len(self.re)
+        partition_im = len(self.im)
+        ctl1 = {}
+        re = Vector()
+        im = Vector()
+        if len( self.re ) > 0 :
+          for rank in self.re.set(partition_re):
+            mask = [0]
+            list_ops = [[1,2,3,4]]*len( self.re.dims(True) ) 
+            for tss in itertools.product( *list_ops ) :
+                ctl1[0] = tf.convert_to_tensor( [rank[0][0]] ,dtype=tf.complex128)
+                for d,space in enumerate(self.re.dims(True)):
+                    ts = tss[d]
+                    if ts == 1:
+                       re_momentum, im_momentum = rank.contents[0][space].g(ks[d],P=True)
+                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
+                    if ts == 2:
+                       re_momentum, im_momentum = rank.contents[0][space].h(ks[d],poly=False)
+                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
+                    if ts == 3:
+                       re_momentum, im_momentum = rank.contents[0][space].h(ks[d],poly=True)
+                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
+                    if ts == 4:
+                       re_momentum, im_momentum = rank.contents[0][space].P().g(ks[d])
+                       ctl1[space] = [-1.0*(tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128))]
 
-        signage = 1.0
-        #PG.self
-        if True:
-            for rank in self.re.contents:
-                new_rank_re = []
-                new_rank_im = []
-                for i,channel in enumerate(rank):
-                    if i == 0:
-                        new_rank_re += [signage*channel]
-                        new_rank_im += [signage*channel]
-                    else:
-                        re,im = channel.g(ks[i-1],P=True)
-                        new_rank_re += [re]
-                        new_rank_im += [im]
-    
-                re__ += Vector().load([new_rank_re]).copy(True)
-                im__ += Vector().load([new_rank_im]).copy(True)  
-            
-            for rank in self.im.contents:
-                new_rank_re = []
-                new_rank_im = []
-                for i,channel in enumerate(rank):
-                    if i == 0:
-                        new_rank_re += [-1*signage*channel]
-                        new_rank_im += [signage*channel]
-                    else:
-                        im,re_m = channel.g(ks[i-1],P=True)
-                        new_rank_re += [re_m]
-                        new_rank_im += [im]
-                re__ += Vector().load([new_rank_re]).copy(True)
-                im__ += Vector().load([new_rank_im]).copy(True)  
+                re1, im1 = self.complex1(ctl1, ext_i = 0, dict_lattices = dict_lattices, mask = mask)
+                re += re1
+                im += im1
 
+        if len( self.im ) > 0 :
+          for rank in self.im.set(partition_im):
+            mask = [0]
+            list_ops = [[1,2,3,4]]*len( self.im.dims(True) ) 
+            for tss in itertools.product( *list_ops ) :
+                ctl1[0] = tf.convert_to_tensor( [rank[0][0]] ,dtype=tf.complex128)
+                for d,space in enumerate(self.im.dims(True)):
+                    ts = tss[d]
+                    if ts == 1:
+                       re_momentum, im_momentum = rank.contents[0][space].g(ks[d],P=True)
+                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
+                    if ts == 2:
+                       re_momentum, im_momentum = rank.contents[0][space].h(ks[d],poly=False)
+                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
+                    if ts == 3:
+                       re_momentum, im_momentum = rank.contents[0][space].h(ks[d],poly=True)
+                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
+                    if ts == 4:
+                       re_momentum, im_momentum = rank.contents[0][space].P().g(ks[d])
+                       ctl1[space] = [-1.0*(tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128))]
 
-        ## H.self
-        if True:
-            for rank in self.re.contents:
-                new_rank_re = []
-                new_rank_im = []
-                for i,channel in enumerate(rank):
-                    if i == 0:
-                        new_rank_re += [channel]
-                        new_rank_im += [channel]
-                    else:
-                        re,im = channel.h(ks[i-1],poly=False)
-                        new_rank_re += [re]
-                        new_rank_im += [im]
-                re__ += Vector().load([new_rank_re]).copy(True)
-                im__ += Vector().load([new_rank_im]).copy(True)     
-                 
-            for rank in self.im.contents:
-                new_rank_re = []
-                new_rank_im = []
-                for i,channel in enumerate(rank):
-                    if i == 0:
-                        new_rank_re += [-1*channel]
-                        new_rank_im += [channel]
-                    else:
-                        im, re_m = channel.h(ks[i-1],poly=False)
-                        new_rank_re += [re_m]
-                        new_rank_im += [im]
-                re__ += Vector().load([new_rank_re]).copy(True)
-                im__ += Vector().load([new_rank_im]).copy(True)     
+                re1, im1 = self.complex1(ctl1, ext_i = 1, dict_lattices = dict_lattices, mask = mask)
+                re += re1
+                im += im1
+        return Operand( re, im)
 
-
-        ## kH.self
-        if True:
-            for rank in self.re.contents:
-                new_rank_re = []
-                new_rank_im = []
-                for i,channel in enumerate(rank):
-                    if i == 0:
-                        new_rank_re += [channel]
-                        new_rank_im += [channel]
-                    else:
-                        re,im = channel.h(ks[i-1],poly=True)
-                        new_rank_re += [re]
-                        new_rank_im += [im]
-                re__ += Vector().load([new_rank_re]).copy(True)
-                im__ += Vector().load([new_rank_im]).copy(True)  
-    
-            for rank in self.im.contents:
-                new_rank_re = []
-                new_rank_im = []
-                for i,channel in enumerate(rank):
-                    if i == 0:
-                        new_rank_re += [-1*channel]
-                        new_rank_im += [channel]
-                    else:
-                        im, re_m = channel.h(ks[i-1],poly=True)
-                        new_rank_re += [re_m]
-                        new_rank_im += [im]
-                re__ += Vector().load([new_rank_re]).copy(True)
-                im__ += Vector().load([new_rank_im]).copy(True)     
-
-            
-        ##GP.self
-        if True:
-            signage *= -1
-            for rank in self.re.contents:
-                new_rank_re = []
-                new_rank_im = []
-                for i,channel in enumerate(rank):
-                    if i == 0:
-                        new_rank_re += [signage*channel]
-                        new_rank_im += [signage*channel]
-                    else:
-                        re,im = channel.P().g(ks[i-1])
-                        new_rank_re += [re]
-                        new_rank_im += [im]
-                re__ += Vector().load([new_rank_re]).copy(True)
-                im__ += Vector().load([new_rank_im]).copy(True)     
-    
-            for rank in self.im.contents:
-                new_rank_re = []
-                new_rank_im = []
-                for i,channel in enumerate(rank):
-                    if i == 0:
-                        new_rank_re += [-1*signage*channel]
-                        new_rank_im += [   signage*channel]
-                    else:
-                        im, re_m = channel.P().g(ks[i-1])
-                        new_rank_re += [re_m]
-                        new_rank_im += [im]
-                re__ += Vector().load([new_rank_re]).copy(True)
-                im__ += Vector().load([new_rank_im]).copy(True)     
-
-        return Operand(re__,im__)
 
     def exp2(self, alphas, positions):
-        """PI_dim < x | compute exp( - 0.5 alphas[dim] (x-positions[dim])^2 ) | x'>"""
-        re__ = Vector()
-        im__ = Vector()
+        """  
+        cascade operators across dimensions in direct product
+         exp( - 0.5 alphas[dim] (x-positions[dim])^2 ) | x'>
+        """
+        partition_re = len(self.re)
+        partition_im = len(self.im)
+        ctl1 = {}
+        re = Vector()
+        im = Vector()
+        if len( self.re ) > 0 :
+          for rank in self.re.set(partition_re):
+            mask = [0]
+            list_ops = [[1,2,3]]*len( self.re.dims(True) ) 
+            for tss in itertools.product( *list_ops ) :
+                ctl1[0] = tf.convert_to_tensor( [rank[0][0]] ,dtype=tf.complex128)
+                for d,space in enumerate(self.re.dims(True)):
+                    ts = tss[d]
+                    if ts == 1:
+                       re_momentum, im_momentum = rank.contents[0][space].g2(alphas[d], positions[d], P=True)
+                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
+                    if ts == 2:
+                       re_momentum, im_momentum = rank.contents[0][space].h2(alphas[d], positions[d])
+                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
+                    if ts == 3:
+                       re_momentum, im_momentum = rank.contents[0][space].P().g2(alphas[d], positions[d])
+                       ctl1[space] = [-(tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128))]
 
-        signage = 1.0
-        #PG2.self
-        if True:
-            for rank in self.re.contents:
-                new_rank_re = []
-                new_rank_im = []
-                for i,channel in enumerate(rank):
-                    if i == 0:
-                        new_rank_re += [signage*channel]
-                        new_rank_im += [signage*channel]
-                    else:
-                        re,im = channel.g2(alphas[i-1], positions[i-1], P=True)
-                        new_rank_re += [re]
-                        new_rank_im += [im]
-    
-                re__ += Vector().load([new_rank_re]).copy(True)
-                im__ += Vector().load([new_rank_im]).copy(True)  
-            
-            for rank in self.im.contents:
-                new_rank_re = []
-                new_rank_im = []
-                for i,channel in enumerate(rank):
-                    if i == 0:
-                        new_rank_re += [-1*signage*channel]
-                        new_rank_im += [signage*channel]
-                    else:
-                        im,re_m = channel.g2(alphas[i-1], positions[i-1], P=True)
-                        new_rank_re += [re_m]
-                        new_rank_im += [im]
-                re__ += Vector().load([new_rank_re]).copy(True)
-                im__ += Vector().load([new_rank_im]).copy(True)  
+                re1, im1 = self.complex1( ctl1, ext_i = 0, dict_lattices = dict_lattices, mask = mask)
+                re += re1
+                im += im1
 
+        if len( self.im ) > 0 :
+          for rank in self.im.set(partition_im):
+            mask = [0]
+            list_ops = [[1,2,3]]*len( self.im.dims(True) ) 
+            for tss in itertools.product( *list_ops ) :
+                ctl1[0] = tf.convert_to_tensor( [rank[0][0]] ,dtype=tf.complex128)
+                for d,space in enumerate(self.im.dims(True)):
+                    ts = tss[d]
+                    if ts == 1:
+                       re_momentum, im_momentum = rank.contents[0][space].g2(alphas[d], positions[d], P=True)
+                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
+                    if ts == 2:
+                       re_momentum, im_momentum = rank.contents[0][space].h2(alphas[d], positions[d])
+                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
+                    if ts == 3:
+                       re_momentum, im_momentum = rank.contents[0][space].P().g2(alphas[d], positions[d])
+                       ctl1[space] = [-(tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128))]
 
-        ## H2.self
-        if True:
-            for rank in self.re.contents:
-                new_rank_re = []
-                new_rank_im = []
-                for i,channel in enumerate(rank):
-                    if i == 0:
-                        new_rank_re += [channel]
-                        new_rank_im += [channel]
-                    else:
-                        re,im = channel.h2(alphas[i-1], positions[i-1])
-                        new_rank_re += [re]
-                        new_rank_im += [im]
-                re__ += Vector().load([new_rank_re]).copy(True)
-                im__ += Vector().load([new_rank_im]).copy(True)     
-                 
-            for rank in self.im.contents:
-                new_rank_re = []
-                new_rank_im = []
-                for i,channel in enumerate(rank):
-                    if i == 0:
-                        new_rank_re += [-1*channel]
-                        new_rank_im += [channel]
-                    else:
-                        im, re_m = channel.h2(alphas[i-1], positions[i-1])
-                        new_rank_re += [re_m]
-                        new_rank_im += [im]
-                re__ += Vector().load([new_rank_re]).copy(True)
-                im__ += Vector().load([new_rank_im]).copy(True)     
+                re1, im1 = self.complex1( ctl1, ext_i = 1, dict_lattices = dict_lattices, mask = mask)
+                re += re1
+                im += im1
+        return Operand( re, im)
 
-
-        ##G2P.self
-        if True:
-            signage *= -1
-            for rank in self.re.contents:
-                new_rank_re = []
-                new_rank_im = []
-                for i,channel in enumerate(rank):
-                    if i == 0:
-                        new_rank_re += [signage*channel]
-                        new_rank_im += [signage*channel]
-                    else:
-                        re,im = channel.P().g2(alphas[i-1], positions[i-1])
-                        new_rank_re += [re]
-                        new_rank_im += [im]
-                re__ += Vector().load([new_rank_re]).copy(True)
-                im__ += Vector().load([new_rank_im]).copy(True)     
-    
-            for rank in self.im.contents:
-                new_rank_re = []
-                new_rank_im = []
-                for i,channel in enumerate(rank):
-                    if i == 0:
-                        new_rank_re += [-1*signage*channel]
-                        new_rank_im += [   signage*channel]
-                    else:
-                        im, re_m = channel.P().g2(alphas[i-1], positions[i-1])
-                        new_rank_re += [re_m]
-                        new_rank_im += [im]
-                re__ += Vector().load([new_rank_re]).copy(True)
-                im__ += Vector().load([new_rank_im]).copy(True)     
-
-        return Operand(re__,im__)
-
-
+    def trace(self, lattices):
+        "integrate!"
+        f = Operand( Vector().flat(lattices) , Vector().flat(lattices))
+        return self.cdot(f)
 
     def cot(self, other):
         """complex outer product"""
