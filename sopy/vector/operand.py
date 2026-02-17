@@ -9,6 +9,7 @@
 
 from .  import Vector
 import tensorflow as tf
+import itertools
 
 class Operand():
     def __init__(self, re, im):
