@@ -27,13 +27,14 @@ class Operand():
         return { space  : re.contents[0][space].lattice for space in re.dims(True) }
         
         
-    def complex1(self,  ctl1, ext_i, mask = [] ):
+    def complex1(self,  ctl1, ext_i, mask = [] , dict_lattices = None):
         """
         one rank
         2**D terms max
         """
         dims = len(ctl1)
-        dict_lattices = self.dict_lattices()
+        if dict_lattices is None:
+            dict_lattices = self.dict_lattices()
         
         assert dims == len(self.re.dims(False))
         re1 = Vector()
