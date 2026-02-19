@@ -93,7 +93,7 @@ class Operand():
                        ctl1[space] = tf.convert_to_tensor([rank[space][0]], dtype = tf.float128)
                        mask += [space]
 
-            re1, im1 = self.im.complex1( ctl1, ext_i = 1,dict_lattices = dict_lattices,mask= mask)
+            re1, im1 = self.complex1( ctl1, ext_i = 1,dict_lattices = dict_lattices,mask= mask)
             re += re1
             im += im1
         return Operand( re, im)
