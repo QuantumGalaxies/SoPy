@@ -37,6 +37,20 @@ class Momentum(component.Component):
         return Momentum( lattice = self.lattice, contents = self.contents, transform = self.transform)
         
 
+    def resample(self, lattice2):
+        """
+        useful for adding lattice elements while maintaining content
+        """
+        contents2 = [tf.reduce_sum(
+         tf.transpose([ value*Momentum(lattice2).delta( 
+         			spacing=self.spacing, 
+         			position=position).contents[0] 
+         			for position,value in zip(lattice2,self.contents[0]) 
+         ])
+         , axis=1
+        )]    
+        return Momentum( lattice2, contents2 )
+
 
     ##document changes
     ##(A)reduce band-pass to pi/spacing

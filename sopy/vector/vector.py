@@ -319,6 +319,17 @@ class Vector :
         self.contents += [v]
         return self
     
+    def resample(self, partition, lattices2 ):
+        ve = Vector()
+        for rank in self.set(partition):
+            rank2 = {0:rank[0]}
+            dict_lattices2 = {}
+            for space, lattice2 in zip(self.dims(True), lattices2):
+                rank2[space] = rank.contents[0][space].resample( lattice2 ).contents
+                dict_lattices2[space] = lattice2
+            ve += Vector().transpose( rank2 , dict_lattices2 )
+        return ve
+    
     def flat(self, lattices ):
         v =  [ Amplitude(1) ]
 

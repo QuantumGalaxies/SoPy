@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sopy-quantum"
-version = "1.7.0"
+version = "1.7.1"
 authors = [
   { name="Jonathan Jerke", email="jonathan@quantumgalaxies.org" },
 ]
