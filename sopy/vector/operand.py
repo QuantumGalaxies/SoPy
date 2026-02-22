@@ -58,11 +58,13 @@ class Operand():
         return ( re1, im1 )
 
 
-    def transform(self, dict_lattices, tss, partition_re, partition_im):
+    def transform(self, dict_lattices, tss):
         """
         tss = [ {1:op1_1, 2:op2_1},{1:op1_2, 2:op2_2},{1:op1_3, 2:op2_3},...]
         
         """
+        partition_re = len(self.re)
+        partition_im = len(self.im)
         ctl1 = {}
         re = Vector()
         im = Vector()

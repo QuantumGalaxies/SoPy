@@ -150,29 +150,46 @@ class Vector :
         new = self.max(partition)
         return new.learn( self, iterate = iterate, alpha = alpha)
 
-    def fibonacci(self, partition, iterate = 0 , total_iterate = 0, alpha = 1e-9, total_alpha = 1e-9):
-        if len(self) < partition:
-            return self
-        
-        Y = Vector()
-        for like_ranks in self.set(partition=partition):
-            Y += like_ranks.decompose(partition = 1, alpha = alpha , iterate = iterate)
-        return Y.learn( self, iterate = total_iterate, alpha = total_alpha )
-        
+    def fibonacci(self, partition, iterate=0, total_iterate=0, alpha=1e-9, total_alpha=1e-9):
+        #written with help from gemini to form recursion, 3x tries makes perfect
+        #copying original Andromeda codes intent
+        # 1. THE BASE CASE (Bottom of the tree)
+        # If we only want 1 partition (or the data is too small to split), stop dividing.
+        if partition <= 1 or len(self) <= 1:
+            Y = Vector()
+            # Decompose this specific chunk of data
+            reduced_ranks = self.decompose(partition=1, alpha=alpha, iterate=iterate)
+            Y += reduced_ranks
+            
+            return Y
 
-    def fibonacci2(self, partition, iterate = 0 , total_iterate = 0, alpha = 1e-9, total_alpha = 1e-9):
-        if len(self) < partition:
-            return self
+        # 2. THE RECURSIVE CASE (The "Doubling" step)
         Y = Vector()
         T = Vector()
-        for like_ranks in self.set(partition=partition):
-            reduced_ranks = like_ranks.decompose(partition = 1, alpha = alpha , iterate = iterate)
+        
+        # We always split into exactly 2 at this level.
+        # This creates the 2 -> 4 -> 8 -> 16 doubling effect as it recurses.
+        for like_ranks in self.set(partition=2):
+            
+            # Ask the subset to handle half of the remaining target partitions
+            reduced_ranks = like_ranks.fibonacci(
+                partition=partition // 2, 
+                iterate=iterate, 
+                total_iterate=total_iterate, 
+                alpha=alpha, 
+                total_alpha=total_alpha
+            )
+            
+            # Combine the results from the two branches
             Y += reduced_ranks
             T += like_ranks
-            Y.learn( T, iterate = total_iterate, alpha = total_alpha )
-        return Y
-
-    
+            
+        # 3. MERGE & LEARN
+        # As the branches merge back together, Y learns the combined T
+        Y.learn(T, iterate=total_iterate, alpha=total_alpha)
+        
+        return Y        
+            
     def dims(self, norm = True):
         """
         an iterator for N 
@@ -301,13 +318,20 @@ class Vector :
             return new
 
     def __next__(self):
+        # SAFER TERMINATION: Stop when we've checked all partitions
+        # (Assuming self.partition was carried over to the 'new' object in __iter__)
+        if hasattr(self, 'partition') and self.index >= self.partition:
+            raise StopIteration
+            
+        # If partition isn't set, default to stopping when index exceeds the number of labels
+        elif self.index > max(self.labels, default=-1): 
+            raise StopIteration
+    
         new = Vector()
         for index in range(len(self)):
             if self.labels[index] == self.index:
                 new.contents += [self.contents[index]]
         self.index += 1
-        if len(new) == 0:
-            raise StopIteration
         return new
     
     def delta(self, a , positions  , spacings, lattices  ):
