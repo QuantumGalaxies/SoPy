@@ -31,7 +31,7 @@ class Vector :
         return tf.math.sqrt(tf.math.reduce_sum(tf.math.abs(self[0])**2))
     
     def n(self):
-        return tf.math.sqrt(self.dot(self))
+        return tf.math.sqrt(tf.math.abs(self.dot(self)))
 
     def boost(self):
         transforms =[[]]+ [Momentum ( contents = self[d] ,lattice = self.contents[0][d].lattice ).set_boost().transform for d in self.dims(True)]

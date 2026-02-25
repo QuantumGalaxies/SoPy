@@ -32,14 +32,14 @@ class Operand():
         one rank
         2**D terms max
         """
-        dims = len(ctl1)
+        len_dims = len(ctl1)
         if dict_lattices is None:
             dict_lattices = self.dict_lattices()
         
-        assert dims == len(self.re.dims(False))
+        assert len_dims == len(self.re.dims(False))
         re1 = Vector()
         im1 = Vector()
-        dim_list = ([[0,1]]*dims)
+        dim_list = ([[0,1]]*len_dims)
         for seq in itertools.product( * dim_list):
             dict_ar = {}
             for space, link in enumerate( seq ):
@@ -47,12 +47,12 @@ class Operand():
 
             if ((sum(seq)+ext_i) % 4) == 0:
                 re1 += Vector().transpose( dict_ar, dict_lattices ) 
-            if ((sum(seq)+ext_i) % 4) == 1:
+            elif ((sum(seq)+ext_i) % 4) == 1:
                 im1 += Vector().transpose( dict_ar, dict_lattices ) 
-            if ((sum(seq)+ext_i) % 4 ) == 2:
+            elif ((sum(seq)+ext_i) % 4 ) == 2:
                 dict_ar[0] *= -1.0
                 re1 += Vector().transpose( dict_ar, dict_lattices ) 
-            if ((sum(seq)+ext_i)  % 4) == 3:
+            elif ((sum(seq)+ext_i)  % 4) == 3:
                 dict_ar[0] *= -1.0
                 im1 += Vector().transpose( dict_ar, dict_lattices ) 
         return ( re1, im1 )
@@ -70,7 +70,7 @@ class Operand():
         im = Vector()
         if len( self.re ) > 0 :
           for rank in self.re.set(partition_re):
-            mask = [0]
+            mask = []
             for ts in tss:
                 ctl1[0] = tf.convert_to_tensor( [rank[0][0]] ,dtype=tf.complex128)
                 for d,space in enumerate(self.re.dims(True)):
@@ -80,12 +80,12 @@ class Operand():
                        ctl1[space] = tf.convert_to_tensor([rank[space][0]], dtype= tf.complex128)
                        mask += [space]
 
-            re1, im1 = self.complex1( ctl1, ext_i = 0, dict_lattices = dict_lattices, mask = mask)
+            re1, im1 = self.complex1( ctl1, ext_i=0, dict_lattices=dict_lattices, mask=mask)
             re += re1
             im += im1
         if len( self.im ) > 0 :
           for rank in self.im.set(partition_im):
-            mask = [0]
+            mask = []
             for ts in tss:
                 ctl1[0] = tf.convert_to_tensor( [rank[0][0]] ,dtype=tf.complex128)
                 for d,space in enumerate(self.im.dims(True)):
@@ -95,7 +95,7 @@ class Operand():
                        ctl1[space] = tf.convert_to_tensor([rank[space][0]], dtype = tf.float128)
                        mask += [space]
 
-            re1, im1 = self.complex1( ctl1, ext_i = 1,dict_lattices = dict_lattices,mask= mask)
+            re1, im1 = self.complex1( ctl1, ext_i=1, dict_lattices=dict_lattices, mask=mask)
             re += re1
             im += im1
         return Operand( re, im)
@@ -112,7 +112,7 @@ class Operand():
         im = Vector()
         if len( self.re ) > 0 :
           for rank in self.re.set(partition_re):
-            mask = [0]
+            mask = []
             list_ops = [[1,2,3,4]]*len( self.re.dims(True) ) 
             for tss in itertools.product( *list_ops ) :
                 ctl1[0] = tf.convert_to_tensor( [rank[0][0]] ,dtype=tf.complex128)
@@ -131,13 +131,13 @@ class Operand():
                        re_momentum, im_momentum = rank.contents[0][space].P().g(ks[d])
                        ctl1[space] = [-1.0*(tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128))]
 
-                re1, im1 = self.complex1(ctl1, ext_i = 0, mask = mask)
+                re1, im1 = self.complex1( ctl1, ext_i=0, mask=mask)
                 re += re1
                 im += im1
 
         if len( self.im ) > 0 :
           for rank in self.im.set(partition_im):
-            mask = [0]
+            mask = []
             list_ops = [[1,2,3,4]]*len( self.im.dims(True) ) 
             for tss in itertools.product( *list_ops ) :
                 ctl1[0] = tf.convert_to_tensor( [rank[0][0]] ,dtype=tf.complex128)
@@ -156,7 +156,7 @@ class Operand():
                        re_momentum, im_momentum = rank.contents[0][space].P().g(ks[d])
                        ctl1[space] = [-1.0*(tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128))]
 
-                re1, im1 = self.complex1(ctl1, ext_i = 1, mask = mask)
+                re1, im1 = self.complex1( ctl1, ext_i=1, mask=mask)
                 re += re1
                 im += im1
         return Operand( re, im)
