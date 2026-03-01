@@ -48,10 +48,8 @@ class Component :
         v = other.values()
         return tf.linalg.matmul(u,v, transpose_a = False, transpose_b = True)
 
-    def normalize(self, anti = False):
+    def normalize(self):
         self.contents = tf.transpose(tf.linalg.normalize(tf.transpose(self.contents),axis=0)[0])
-        if anti:
-            self.contents *= -1.0
         return self
 
     def amplitude(self):

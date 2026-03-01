@@ -84,73 +84,104 @@ class Vector :
         return other
 
     
-    def copy(self, norm_ = True, threshold = 0):
+    def copy(self, norm_:bool =False, threshold:float = 0.):
         other = Vector()
         for rank in self.set(partition = len(self)):
-            contents = []
-            if norm_:
-                n = rank.n()
-                if n > threshold:
-                        contents = [Amplitude(a = n)]
-                else:
-                    continue
-            else:
-                contents = [Amplitude(contents = rank[0])]
-
-            
+            contents = [Amplitude(contents = rank[0])]
             for d in self.dims(True):
-                if norm_:
-                    if (rank[0][0][0] > 0) or d > 1:
-                        contents += [rank.contents[0][d].normalize().copy()]
-                    else:
-                        contents += [rank.contents[0][d].normalize(anti = True).copy()]
-                else:
-                    contents += [rank.contents[0][d].copy()]
-            if contents != []:
-                other.contents += [contents]
+                contents += [rank.contents[0][d].copy()]
+            other.contents += [contents]
+        if norm_:
+           return other.balance(threshold)
         return other
         
+    def balance(self, threshold = 0.):
+        ranks = Vector()
+        for rank in self.set(partition = len(self)):
+            amp = rank.n()
+            if tf.math.abs(amp) < threshold:
+                continue
+            else:
+                content = [Amplitude(a = amp)] 
+            for d in self.dims(True):
+                content += [rank.contents[0][d].copy().normalize()]
+            new = Vector()
+            new.contents = [content]
+            if new.dot(rank) < 0.:
+                new *= -1.0
+            ranks += new
+        return ranks
+
+        
+    def iterate(self, other, alpha:float, target_dim:int, norm_component:bool):
+        u = self##train
+        v = other##origin
+        eye = tf.linalg.eye(len(u),dtype = tf.float64)            
+        target_dim = (target_dim % len(self.dims(True)))+1
+        contents = {0: tf.convert_to_tensor(len(self) * [[1.]], dtype=tf.float64)}
+        for d in self.dims(True):
+           if d == target_dim:
+              content = Momentum(contents =tf.linalg.matmul(  
+               tf.linalg.inv( u.dot(u,norm_ = True, exclude_dim = target_dim, sum_ = False) + alpha*eye),
+                tf.linalg.matmul(u.dot(v,norm_ = True, exclude_dim = target_dim, sum_ = False),
+                 tf.multiply(v[0],v[target_dim]), transpose_b = False) )
+                  , lattice = u.contents[0][target_dim].lattice
+              )
+              if not norm_component:
+                contents[d] = content.copy().normalize().values()
+                signage = tf.transpose(tf.convert_to_tensor([(tf.linalg.diag_part(tf.linalg.matmul(contents[d], content.values(), transpose_a=False, transpose_b=True)))]))
+                contents[0] *= signage
+              else:
+                contents[d] = content.copy().normalize().values()
+                signage = tf.convert_to_tensor(
+                   list(
+                     map( lambda x : [ tf.cast( 1.0 if x >= 0 else -1.0 , dtype=tf.float64) ], 
+                      tf.linalg.diag_part(tf.linalg.matmul(contents[d], content.values(), transpose_a=False, transpose_b=True)))
+                    )
+                  )
+                contents[0] *= signage
+              signage = tf.convert_to_tensor(
+                   list(
+                     map( lambda x : [ tf.cast( 1.0 if x >= 0 else -1.0 , dtype=tf.float64) ], 
+                      tf.linalg.diag_part(tf.linalg.matmul(contents[d], u[d], transpose_a=False, transpose_b=True)))
+                    )
+                  )
+              contents[0] *= signage
+           else:
+              contents[d] = self[d]
+        new =  Vector().transpose( contents, {d: self.contents[0][d].lattice for d in self.dims(True)} )
+        #self.transform = self.contents[0][d].transform
+        return new
+
     def mul(self, m , norm_ = False):
         other = self.copy()
         for r in range(len(self)):
             other.contents[r][0] *= m
         return other
 
-    def learn(self, other , iterate = 0, alpha = 1e-9):
+    def learn(self, other , iterate = 0, alpha = 1e-9, threshold=0.):
         assert isinstance(other, Vector)
         if (len(other) == 0) or ( len(self) == 0 ) :
             return Vector()
         u = self##train
         v = other##origin
-        eye = tf.linalg.eye(len(u),dtype = tf.float64)            
         q = Vector()
 
         if self.dims(True) == [1]:
             ##raw sum
             q.contents = [ [ Amplitude(a=1), Momentum(contents = [tf.math.reduce_sum(v[0]*v[1],axis=0)], lattice = self.contents[0][1].lattice) ] ]
-            
-            return q.copy(True)
-        comps = [[]]+[ Momentum(contents =tf.linalg.matmul(  
-            tf.linalg.inv( u.dot(u,norm_ = True, exclude_dim = target_dim, sum_ = False) + alpha*eye),
-            tf.linalg.matmul(u.dot(v,norm_ = True, exclude_dim = target_dim, sum_ = False),
-            tf.multiply(v[0],v[target_dim]), transpose_b = False) )
-         , lattice = u.contents[0][target_dim].lattice, transform = self.contents[0][target_dim].transform
-        ) for target_dim in u.dims(True) ]
-        amps = Amplitude(contents = 1./len(u.dims(True))*tf.math.reduce_sum([comps[d].amplitude() for d in u.dims(True) ],axis=0))
-        q.contents = [[ amps[r] ] + [ comps[d][r].normalize() for d in u.dims(True) ] for r in range(len(u)) ]
-        if iterate == 0:
             return q
-        else:
-            return q.learn(other, iterate - 1, alpha = alpha )  
+            
+        train = self.copy(False,threshold)
+        for target_dim in range( iterate * len( train.dims(True)), 0, -1):
+           train  =  train.iterate(other, alpha, target_dim, target_dim != 1)
+        return train
 
-    def decompose(self, partition , iterate = 0 , alpha = 1e-9):
-        if len(self) < partition:
-            return self
-        
-        new = self.max(partition)
+    def decompose(self, partition , iterate = 0 , alpha = 1e-9):        
+        new = self.max(min(len(self),partition))
         return new.learn( self, iterate = iterate, alpha = alpha)
 
-    def fibonacci(self, partition, iterate=0, total_iterate=0, alpha=1e-9, total_alpha=1e-9):
+    def fibonacci(self, partition, level = 0, iterate=0, total_iterate=0, alpha=1e-9, total_alpha=1e-9):
         #written with help from gemini to form recursion, 3x tries makes perfect
         #copying original Andromeda codes intent
         # 1. THE BASE CASE (Bottom of the tree)
@@ -160,7 +191,6 @@ class Vector :
             # Decompose this specific chunk of data
             reduced_ranks = self.decompose(partition=1, alpha=alpha, iterate=iterate)
             Y += reduced_ranks
-            
             return Y
 
         # 2. THE RECURSIVE CASE (The "Doubling" step)
@@ -169,26 +199,26 @@ class Vector :
         
         # We always split into exactly 2 at this level.
         # This creates the 2 -> 4 -> 8 -> 16 doubling effect as it recurses.
-        for like_ranks in self.set(partition=2):
-            
-            # Ask the subset to handle half of the remaining target partitions
-            reduced_ranks = like_ranks.fibonacci(
-                partition=partition // 2, 
+        
+        all_ranks = {}
+        for i,like_ranks in enumerate(self.copy().set(partition=2)):
+            all_ranks[i] = like_ranks
+        
+        for i in range(2):
+            reduced_ranks = all_ranks[i].fibonacci(
+                partition=partition // 2 + i * ( partition % 2 ) , 
+                level = level+1,
                 iterate=iterate, 
                 total_iterate=total_iterate, 
                 alpha=alpha, 
                 total_alpha=total_alpha
             )
-            
             # Combine the results from the two branches
             Y += reduced_ranks
-            T += like_ranks
-            
+            T += all_ranks[i]
         # 3. MERGE & LEARN
         # As the branches merge back together, Y learns the combined T
-        Y.learn(T, iterate=total_iterate, alpha=total_alpha)
-        
-        return Y        
+        return Y.learn(T, iterate=total_iterate, alpha=total_alpha)
             
     def dims(self, norm = True):
         """
