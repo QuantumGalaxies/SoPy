@@ -136,14 +136,16 @@ class Vector :
                 signage = tf.convert_to_tensor(
                    list(
                      map( lambda x : [ tf.cast( 1.0 if x >= 0 else -1.0 , dtype=tf.float64) ], 
-                      tf.linalg.diag_part(tf.linalg.matmul(contents[d], content.values(), transpose_a=False, transpose_b=True)))
+                      [(tf.linalg.matmul([contents[d][l]], [u[d][l]], transpose_a=False, transpose_b=True)) for l in range(len(u))]
+                      )
                     )
                   )
                 contents[0] *= signage
               signage = tf.convert_to_tensor(
                    list(
                      map( lambda x : [ tf.cast( 1.0 if x >= 0 else -1.0 , dtype=tf.float64) ], 
-                      tf.linalg.diag_part(tf.linalg.matmul(contents[d], u[d], transpose_a=False, transpose_b=True)))
+                      [(tf.linalg.matmul([contents[d][l]], [u[d][l]], transpose_a=False, transpose_b=True)) for l in range(len(u))]
+                      )
                     )
                   )
               contents[0] *= signage
@@ -195,13 +197,12 @@ class Vector :
 
         # 2. THE RECURSIVE CASE (The "Doubling" step)
         Y = Vector()
-        T = Vector()
-        
+                
         # We always split into exactly 2 at this level.
         # This creates the 2 -> 4 -> 8 -> 16 doubling effect as it recurses.
         
         all_ranks = {}
-        for i,like_ranks in enumerate(self.copy().set(partition=2)):
+        for i,like_ranks in enumerate(self.set(partition=2)):
             all_ranks[i] = like_ranks
         
         for i in range(2):
@@ -215,10 +216,9 @@ class Vector :
             )
             # Combine the results from the two branches
             Y += reduced_ranks
-            T += all_ranks[i]
         # 3. MERGE & LEARN
         # As the branches merge back together, Y learns the combined T
-        return Y.learn(T, iterate=total_iterate, alpha=total_alpha)
+        return Y.learn(self, iterate=total_iterate, alpha=total_alpha)
             
     def dims(self, norm = True):
         """
