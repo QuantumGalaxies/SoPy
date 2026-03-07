@@ -69,7 +69,7 @@ First set a lattice,
 
  	cv = sp.Operand( u, sp.Vector() )
   
-  	cv.exp_i([1,0]).cot(cv)
+  	cv.exp_i([1,0]).trace()
  
 
 linear dependence factor...
