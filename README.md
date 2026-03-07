@@ -90,7 +90,7 @@ Reduce v with Fibonacci procedure
 
 Compare with standard approaches
 
-	[ v.decompose( partition = partition, iterate = 10, total_iterate = 10).dist(v) for partition in range(1,len(v))]
+	[ v.decompose( partition = partition, iterate = 10).dist(v) for partition in range(1,len(v))]
 
 Use boost
 
