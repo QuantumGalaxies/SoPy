@@ -6,6 +6,7 @@ The central data structure in SoPy is the `SoPy` object. It is designed to repre
 
 ### Internal Structure
 It is internally comprised of:
+
 * **Amplitudes:** A list of coefficients.
 * **Components List:** A corresponding list of vector components.
 

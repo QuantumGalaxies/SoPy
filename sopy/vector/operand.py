@@ -22,11 +22,6 @@ class Operand():
         return Operand(self.re.copy(norm_ = norm_, threshold = threshold), self.im.copy(norm_=norm_, threshold = threshold))
         
         
-    def dict_lattices(self):
-        re = self.re
-        return { space  : re.contents[0][space].lattice for space in re.dims(True) }
-        
-        
     def complex1(self,  ctl1, ext_i, mask = [] , dict_lattices = None):
         """
         one rank
@@ -34,7 +29,7 @@ class Operand():
         """
         len_dims = len(ctl1)
         if dict_lattices is None:
-            dict_lattices = self.dict_lattices()
+            dict_lattices = self.re.dict_lattices()
         
         assert len_dims == len(self.re.dims(False))
         re1 = Vector()
@@ -108,7 +103,7 @@ class Operand():
             im += im1
         return Operand( re.balance(threshold), im.balance(threshold))
 
-    def exp_i(self, ks, threshold:float=1e-6, partition_re = None, partition_im = None ):
+    def exp_i(self, ks, threshold:float=1e-6, partition_re = None, partition_im = None, test_expedite = False):
         """  
         cascade operators across dimensions in direct product
          exp( - ks[dim]*x )| x'>
@@ -123,7 +118,10 @@ class Operand():
         if len( self.re ) > 0 :
           for rank in self.re.set(partition_re):
             mask = [0]
-            list_ops = [[1,2,3,4]]*len( self.re.dims(True) ) 
+            if test_expedite:
+                list_ops = [[2,3,3]]*len( self.re.dims(True) ) 
+            else:
+                list_ops = [[1,2,3,4]]*len( self.re.dims(True) ) 
             for tss in itertools.product( *list_ops ) :
                 ctl1[0] = tf.convert_to_tensor( [rank[0][0]] ,dtype=tf.complex128)
                 for d,space in enumerate(self.re.dims(True)):
@@ -150,7 +148,10 @@ class Operand():
         if len( self.im ) > 0 :
           for rank in self.im.set(partition_im):
             mask = []
-            list_ops = [[1,2,3,4]]*len( self.im.dims(True) ) 
+            if test_expedite:
+                list_ops = [[2,3,3]]*len( self.re.dims(True) ) 
+            else:
+                list_ops = [[1,2,3,4]]*len( self.re.dims(True) ) 
             for tss in itertools.product( *list_ops ) :
                 ctl1[0] = tf.convert_to_tensor( [rank[0][0]] ,dtype=tf.complex128)
                 for d,space in enumerate(self.im.dims(True)):
@@ -231,8 +232,11 @@ class Operand():
                 im += im1
         return Operand( re, im)
 
-    def trace(self, lattices):
+    def trace(self, lattices  = None):
         "integrate!"
+        if lattices is None:
+            lattices = self.re.lattices()
+            
         f = Operand( Vector().flat(lattices) , Vector().flat(lattices))
         return self.cdot(f)
 

@@ -37,6 +37,6 @@ print(f"SoPy successfully imported. Version: {sopy.__version__}")
 
 Run it with:
 ```bash
-python test_sopy.py
+pytest
 ```
 

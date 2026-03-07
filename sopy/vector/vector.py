@@ -14,6 +14,12 @@ import numpy as np
 from sklearn.cluster import KMeans
 class Vector :
 
+    def dict_lattices(self):
+        return { space  : self.contents[0][space].lattice for space in self.dims(True) }
+
+    def lattices(self):
+        return [ self.contents[0][space].lattice for space in self.dims(True) ]
+
     def __init__(self):
         self.contents = []
     
@@ -112,48 +118,25 @@ class Vector :
             ranks += new
         return ranks
 
-        
-    def iterate(self, other, alpha:float, target_dim:int, norm_component:bool):
+    def iterate(self, other, alpha:float, target_dim:int, norm_component:bool, signage_test:bool = False):
         u = self##train
         v = other##origin
         eye = tf.linalg.eye(len(u),dtype = tf.float64)            
         target_dim = (target_dim % len(self.dims(True)))+1
-        contents = {0: tf.convert_to_tensor(len(self) * [[1.]], dtype=tf.float64)}
-        for d in self.dims(True):
-           if d == target_dim:
-              content = Momentum(contents =tf.linalg.matmul(  
+        vec = tf.linalg.matmul(  
                tf.linalg.inv( u.dot(u,norm_ = True, exclude_dim = target_dim, sum_ = False) + alpha*eye),
                 tf.linalg.matmul(u.dot(v,norm_ = True, exclude_dim = target_dim, sum_ = False),
-                 tf.multiply(v[0],v[target_dim]), transpose_b = False) )
-                  , lattice = u.contents[0][target_dim].lattice
-              )
-              if not norm_component:
-                contents[d] = content.copy().normalize().values()
-                signage = tf.transpose(tf.convert_to_tensor([(tf.linalg.diag_part(tf.linalg.matmul(contents[d], content.values(), transpose_a=False, transpose_b=True)))]))
-                contents[0] *= signage
-              else:
-                contents[d] = content.copy().normalize().values()
-                signage = tf.convert_to_tensor(
-                   list(
-                     map( lambda x : [ tf.cast( 1.0 if x >= 0 else -1.0 , dtype=tf.float64) ], 
-                      [(tf.linalg.matmul([contents[d][l]], [u[d][l]], transpose_a=False, transpose_b=True)) for l in range(len(u))]
-                      )
-                    )
-                  )
-                contents[0] *= signage
-              signage = tf.convert_to_tensor(
-                   list(
-                     map( lambda x : [ tf.cast( 1.0 if x >= 0 else -1.0 , dtype=tf.float64) ], 
-                      [(tf.linalg.matmul([contents[d][l]], [u[d][l]], transpose_a=False, transpose_b=True)) for l in range(len(u))]
-                      )
-                    )
-                  )
-              contents[0] *= signage
-           else:
-              contents[d] = self[d]
-        new =  Vector().transpose( contents, {d: self.contents[0][d].lattice for d in self.dims(True)} )
-        #self.transform = self.contents[0][d].transform
-        return new
+                 tf.multiply(v[0],v[target_dim]), transpose_b = False))
+                 
+        for l in range(len(self)):
+            self.contents[l][target_dim].contents = [vec[l]]
+            self.contents[l][target_dim].normalize()
+            inner = (tf.linalg.matmul([vec[l]], [self.contents[l][target_dim].values()], transpose_a=False, transpose_b=True))[0][0]
+            self.contents[l][0] = Amplitude(contents=[tf.cast( (1.0 if inner>=0 else -1.0) if norm_component else inner , dtype=tf.float64)])
+            if signage_test:
+                inner = (tf.linalg.matmul([u[target_dim][l]], [self.contents[l][target_dim].values()], transpose_a=False, transpose_b=True))[0][0]
+                self.contents[l][0] = Amplitude(contents=[tf.cast( (1.0 if inner>=0 else -1.0), dtype=tf.float64)])
+        return self
 
     def mul(self, m , norm_ = False):
         other = self.copy()
@@ -176,7 +159,7 @@ class Vector :
             
         train = self.copy(False,threshold)
         for target_dim in range( iterate * len( train.dims(True)), 0, -1):
-           train  =  train.iterate(other, alpha, target_dim, target_dim != 1)
+           train.iterate(other, alpha, target_dim, target_dim != 1)
         return train
 
     def decompose(self, partition , iterate = 0 , alpha = 1e-9):        
@@ -397,12 +380,14 @@ class Vector :
         return tf.convert_to_tensor([ [ self.contents[r][d].sample(sample_rank=0,num_samples=1) for d in self.dims() ] for r in sample_ranks ])
 
 
-    def transpose(self, tl, lattices_dict):
+    def transpose(self, tl, lattices_dict = None):
         """
         meant to input a dictionary with integer keys, which includes 0 as a amplitude
 
         lattices_dict is a dictionary in same key of lattices        
         """
+        if lattices_dict is None:
+            lattices_dict = self.dict_lattices()
         
         comps = [ Amplitude( contents = tl[0]) ]+ [ Momentum(contents=tl[key], lattice=lattices_dict[key]) for key in tl if key != 0 ]   
         other = Vector()

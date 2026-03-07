@@ -10,33 +10,34 @@ This tutorial guides you through loading a dataset, processing it, and generatin
 
 ### Steps
 1.  **Initialize the SoPy Object:** Define your lattice sites and dimensions.
-2.  **Load Data:** Use `SoPy.transpose()` to ingest your dictionary of spatial data.
-3.  **Run Decomposition:** Call the `.decompose()` method.
+2.  **Load Data:** Use `sp.Vector().transpose()` to ingest your dictionary of spatial data.
+3.  **Run Decomposition:** Call the `.fibonacci()` method.
 4.  **Analyze Results:** Check the rank reduction and error metrics.
 
 ```python
-from sopy.vectors import SoPy
+import sopy as sp
 
 # 1. Define Lattices (Example for a 2D space)
 # Define exact sampling points for each dimension
-lattices = [[0.0, 0.1, 0.2, 0.3], [0.0, 0.1, 0.2, 0.3]]
-
-# 2. Initialize and Load Data
-my_vector = SoPy(lattices)
+lattices_dict = {1:[0.0, 0.1, 0.2, 0.3], 2:[0.0, 0.1, 0.2, 0.3]}
 
 # Assuming 'spatial_data' is a Dict[spaces]
-# my_vector.transpose(spatial_data)
+spatial_data = {0:[[1],[1],[1]], 1:[[0,1,0,0],[0,1,0,0],[0,0,1,1]], 2:[[1,0,0,1],[2,0,1,1],[0,1,1,1]]}
+my_vector = sp.Vector().transpose(spatial_data, lattices_dict)
 
 # 3. Decompose
 # Reduces the rank using default algorithms
-decomposed_vector = my_vector.decompose()
+decomposed_vector = my_vector.decompose(2, iterate=100)
+fibonacci_vector = my_vector.fibonacci(2, iterate=10)
 
 # 4. Access Results
-print(f"Original Rank: {len(my_vector.amplitudes)}")
-print(f"Decomposed Rank: {len(decomposed_vector.amplitudes)}")
+print(f"Original Rank: {len(my_vector)}")
+print(f"Fibonacci Rank: {len(fibonacci_vector)}")
+print(f"Fibonacci Distance: {my_vector.dist(fibonacci_vector)}")
+
 ```
 
-## 2. Fourier Analysis with exp(ikx)
+## 2. Fourier Analysis with exp_i(kx)
 
 SoPy allows for complex number domain analysis using the exp(ikx) operator. This is essential for moving between spatial and momentum representations in hyper-dimensional space.
 
@@ -46,14 +47,16 @@ The library integrates the operator in SoP form, allowing you to apply it direct
 
 ```python
 # Applying the Fourier Operator
-# Assuming 'complex_sop' is your initialized SoPy object containing complex data
+# Assuming 'my_vector' is your initialized SoPy Vector containing real data
 
 # Define Momentum values (k)
-ks = [1.0, 2.0, 3.0] 
+ks = [1.0, 2.0] 
 
 # Apply the operator via the Operand container
 # This transforms the vector into the momentum domain
-transformed_vector = complex_sop.Operand.exp_i(ks)
+ops = sp.Operand( my_vector, sp.Vector())
+transformed_vector = ops.exp_i(ks)
+transformed_vector.trace()
 ```
 
 ## 3. PySCF Integration (3D Digital Solutions)

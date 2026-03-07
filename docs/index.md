@@ -1,29 +1,39 @@
 # SoPy: Quantum Galaxies
 
-**Release 1.6.0**
+**Release 1.8.2**
 
 ## 1. Introduction
 
 ### What is SoPy?
-SoPy is a specialized Python library focused on the advanced decomposition of Sums of Products (SoP) tensors.
+SoPy is a specialized Python library focused on the advanced decomposition of Sums of Products (SoP) tensors. This is different than reducing dense tensors to SoP.
+
 
 Unlike traditional methods (such as Tensorly) that reduce dense, hyper-dimensional vectors to SoP form, SoPy provides novel decomposition algorithms—including **Advanced Fibonacci methods**—to reliably decrease the number of terms in complex SoP summations.
 
-It treats Gaussian-like datasets as inherent SoP vectors within a hyper-dimensional vector space. The library also integrates the $\exp(i k x)$ operator in SoP form to facilitate advanced Fourier workflows.
+It treats Gaussian-like datasets as inherent SoP vectors within a hyper-dimensional vector space. The library also integrates the exp_i(k x) operator in SoP form to facilitate advanced Fourier workflows.
 
 ### Key Features
 * **Advanced SoP Decomposition:** Novel algorithms for reducing term counts in complex summations.
-* **Hyper-dimensional Vector Modeling:** Treats datasets as vectors in high-dimensional spaces (up to 12D).
-* **Fourier Workflow Integration:** Native support for the $\exp(i k x)$ operator.
+* **Hyper-dimensional Vector Modeling:** Treats datasets as vectors in high-dimensional spaces.
+* **Fourier Workflow Integration:** Native support for the exp_i( k x) operator.
 * **PySCF Integration:** Optional support for digital orbitals and geminals (via `sopy-quantum[pyscf]`).
 
 ---
+
+
+## 2. What's New in Release 1.8.2?
+
+This release adds the SoP tranformation interface. 
+* **Recurse Fibonacci:** Added a procedure to decompose larger canonical rank vectors with greater stability.
+* **Stability Improvements:** Various bug fixes and performance stability improvements across the core decomposition and data ingestion modules.
+
+
 
 ## 2. What's New in Release 1.6.0?
 
 This release introduces native support for **Complex Vectors**, allowing for proper handling and decomposition of data in the complex hyper-dimensional space.
 
-* **Complex Space Handling:** Crucial for leveraging the Fourier $\exp(i k x)$ operator with full fidelity.
+* **Complex Space Handling:** Crucial for leveraging the Fourier exp_i(k x) operator with full fidelity.
 * **Stability Improvements:** Various bug fixes and performance stability improvements across the core decomposition and data ingestion modules.
 
 ---
