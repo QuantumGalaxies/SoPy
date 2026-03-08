@@ -30,7 +30,7 @@ keywords:
   - scientific-computing
   - TensorFlow
 license: MIT
-version: 1.6.0
+version: 1.8.3
 date-released: '2024-02-11'
 
 preferred-citation:
