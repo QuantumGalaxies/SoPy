@@ -10,13 +10,18 @@ authors:
     email: jonathan@quantumgalaxies.org
     affiliation: Quantum Galaxies Corp
     orcid: 'https://orcid.org/0000-0002-2449-4848'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.18901987
+    description: 'The Zenodo DOI for the SoPy software.'
 repository-code: 'https://github.com/QuantumGalaxies/SoPy'
 url: 'https://pypi.org/project/sopy-quantum/'
 abstract: >-
   sopy-quantum is a Python library tailored for the efficient 
   calculation and manipulation of Sums of Products (SoP) in 
   quantum mechanical systems. It provides a lightweight and
-  open-source alternative using TensorFlow.
+  open-source alternative using TensorFlow. SoPy also has a
+  comparable FT method (see paper).
 keywords:
   - quantum-physics
   - quantum-mechanics
@@ -27,3 +32,13 @@ keywords:
 license: MIT
 version: 1.6.0
 date-released: '2024-02-11'
+
+preferred-citation:
+  type: article
+  authors:
+    - given-names: Jonathan
+      family-names: Jerke
+  title: "Cardinal Fourier Transform: A Dimensionally Separated Alternative to the FFT"
+  doi: 10.5281/zenodo.18896541
+  year: 2026
+  status: preprint

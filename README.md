@@ -1,7 +1,9 @@
 # Sums Of Product
 ## SoPy
 
-[![PyPI Downloads](https://static.pepy.tech/personalized-badge/sopy-quantum?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/sopy-quantum)
+[ pypi.org ]  [![PyPI Downloads](https://static.pepy.tech/personalized-badge/sopy-quantum?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/sopy-quantum)
+
+
 
 ## Sums of Products for data and science
 
@@ -97,9 +99,13 @@ Use boost
 	[ v.boost().fibonacci(  partition = partition, iterate = 10 ,alpha = 1e-2).unboost().dist(v) for partition in range(1,len(v))]
 
 ### How to Contribute
-* Write to disk/database/json
 * Develop amplitude/component to various non-local resources
-  * Engage with Quantum Galaxies deploying matrices in separated dimensions
+* Engage with Quantum Galaxies deploying matrices in separated dimensions
+
+### Paper in preprint
+
+[ Cardinal Fourier Transform: A Dimensionally Separated Alternative to the FFT ] (https://zenodo.org/records/18896541)
+
 
 ### Contact Info
 
