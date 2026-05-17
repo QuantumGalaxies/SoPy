@@ -99,6 +99,16 @@ class Amplitude :
         if r <  len(self): 
             return Amplitude( contents = [self.contents[r]] )
             
+
+    def add(self, other  ):
+        assert isinstance(other, Amplitude)
+        u = self.values()
+        v = other.values()
+        self.contents = tf.concat([u,v],0)
+        return self
+
+
+
     def __imul__(self, m):
         self.contents *= tf.constant(m, dtype= tf.float64)
         return self

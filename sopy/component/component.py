@@ -54,7 +54,22 @@ class Component :
 
     def amplitude(self):
         return tf.linalg.normalize((self.contents),axis=1)[1]
-      
+
+    def batch_add(self, others):
+        """
+        Safely concatenates a list of Component objects all at once 
+        to prevent C++ heap corruption/fragmentation.
+        """
+        # Collect the current tensor and all incoming tensors in a Python list
+        tensor_list = [self.values()]
+        for other in others:
+            assert isinstance(other, Component)
+            tensor_list.append(other.values())
+        
+        # Hit the C++ memory allocator exactly ONE time
+        self.contents = tf.concat(tensor_list, axis=0)
+        return self
+
     def add(self, other  ):
         assert isinstance(other, Component)
         u = self.values()
@@ -76,7 +91,6 @@ class Component :
         self.contents =  tf.transpose(tf.linalg.matmul(tf.transpose(self.transform),tf.transpose(u)))
         return self
 
-    
     def unboost(self):
         u = self.values()
         self.contents =  tf.transpose(tf.linalg.matmul(self.transform,tf.transpose(u)))
@@ -84,7 +98,6 @@ class Component :
         
     def len(self):
         return len(tf.transpose(self.contents))
-
 
     def __getitem__(self, r):
         if r < len(self):
