@@ -17,11 +17,25 @@ class Component :
     d > 0 
     """
 
-    def __init__ (self, lattice , contents = [], transform = [] ):
-        self.contents  = tf.convert_to_tensor(contents, dtype=tf.float64)
+    def __init__(self, lattice, contents=None, transform=None):
+        if contents is None: contents = []
+        if transform is None: transform = []
+
+        self.lattice = lattice
         self.transform = transform
-        self.lattice   = lattice
-        self.spacing   = lattice[1] - lattice[0]
+        
+        # immutable tensor for contents to prevent C++ heap corruption/fragmentation
+        self.contents = tf.convert_to_tensor(contents, dtype=tf.float64)
+
+        # We check to make sure the lattice actually has at least 2 elements first.
+        try:
+            if len(lattice) > 1:
+                self.spacing = lattice[1] - lattice[0]
+            else:
+                self.spacing = 0.0  # Safe fallback for 1D/single-point lattices
+        except TypeError:
+            # Fallback if lattice is a scalar instead of a list/array
+            self.spacing = 0.0
 
     def copy(self):
         other = Component(lattice = self.lattice, contents = self.contents, transform = self.transform)
@@ -100,9 +114,19 @@ class Component :
         return len(tf.transpose(self.contents))
 
     def __getitem__(self, r):
+        print(f"Attempting to access component at rank {r} with total ranks {len(self)}")
         if r < len(self):
             return Component(lattice = self.lattice, contents = [self.contents[r]], transform = self.transform )
     
+    # --- ADD THIS METHOD ---
+    def __setitem__(self, r, value):
+        """Allows overwriting an internal component using bracket notation."""
+        if r < len(self):
+            # Routes the Amplitude object directly into the correct slot in contents
+            self.contents[r] = value 
+        else:
+            raise IndexError("Component assignment index out of range")
+
     def sample(self, sample_rank, num_samples = 1):
         """
         Manifestly obvious, the reconstruction under frequency sampling of this output would be q

@@ -20,8 +20,6 @@ class Momentum(component.Component):
         self.complexity = tf.constant(tf.complex(one,zero), dtype = tf.complex128)
         self.spacing = abs(lattice[1] - lattice[0])
         self.p = tf.convert_to_tensor( [ [ -( -1 )**(i-j)/(i-j) if i != j else 0 for j in range(len(lattice)) ] for i in range(len(lattice))] , dtype = tf.float64)
-        pass
-
 
     @classmethod
     def from_Component(cls, component_instance):

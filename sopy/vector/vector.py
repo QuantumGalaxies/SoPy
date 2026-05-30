@@ -44,18 +44,16 @@ class Vector :
     def n(self):
         return tf.math.sqrt(tf.math.abs(self.dot(self)))
 
-    # def boost(self):
-    #     transforms =[[]]+ [Momentum ( contents = self[d] ,lattice = self.contents[0][d].lattice ).set_boost().transform for d in self.dims(True)]
-    #     new = Vector()
-    #     for r in range(len(self)):
-    #         new.contents += [ [self.contents[r][d].copy().set_boost(transform = transforms[d]).boost() for d in self.dims(False)] ]
-    #     return new
+    def boost(self):
+        transforms =[[]]+ [Momentum ( contents = self[d] ,lattice = self.contents[0][d].lattice ).set_boost().transform for d in self.dims(True)]
+        new = Vector()
+        new.components = [self.components[d].set_boost(transform = transforms[d]).boost() for d in self.dims(False)]
+        return new
         
-    # def unboost(self):
-    #     new = Vector()
-    #     for r in range(len(self)):
-    #         new.contents += [ [self.contents[r][d].copy().unboost() for d in self.dims(False)] ]
-    #     return new    
+    def unboost(self):
+        new = Vector()
+        new.components += [self.components[d].unboost() for d in self.dims(False)] 
+        return new    
     
     def dot(self, other, another = None, norm_ = False, exclude_dim : int = -1 , sum_ = True):
         """
@@ -94,7 +92,6 @@ class Vector :
         other.components = self.components
         return other
 
-    
     def copy(self, norm_:bool =False, threshold:float = 0.):
         new = Vector()
         for rank in self:
@@ -125,7 +122,7 @@ class Vector :
             ranks += new
         return ranks
 
-    def iterate(self, other, alpha:float, target_dim:int, norm_component:bool, signage_test:bool = False):
+    def iterate(self, other, alpha:float, target_dim:int, norm_component:bool, signage_test:bool = False, threshold:float = 0.):
         u = self##train
         v = other##origin
         eye = tf.linalg.eye(len(u),dtype = tf.float64)            
@@ -134,45 +131,56 @@ class Vector :
                tf.linalg.inv( u.dot(u,norm_ = True, exclude_dim = target_dim, sum_ = False) + alpha*eye),
                 tf.linalg.matmul(u.dot(v,norm_ = True, exclude_dim = target_dim, sum_ = False),
                  tf.multiply(v[0],v[target_dim]), transpose_b = False))
-                 
+        amplitude_target = []
+        component_target = []
+        indices_to_remove = []
         for l in range(len(self)):
-            self.components[target_dim][l].contents = [vec[l]]
-            self.components[target_dim][l].normalize()
-            inner = (tf.linalg.matmul([vec[l]], [self.components[target_dim][l].values()], transpose_a=False, transpose_b=True))[0][0]
-            self.components[target_dim][l][0] = Amplitude(contents=[tf.cast( (1.0 if inner>=0 else -1.0) if norm_component else inner , dtype=tf.float64)])
+            component_target_l = (tf.transpose(tf.linalg.normalize(tf.transpose(vec[l]),axis=0)[0]))
+            inner = (tf.linalg.matmul([u[target_dim][l]], [component_target_l], transpose_a=False, transpose_b=True))[0][0]
             if signage_test:
-                inner = (tf.linalg.matmul([u[target_dim][l]], [self.components[target_dim][l].values()], transpose_a=False, transpose_b=True))[0][0]
-                self.components[target_dim][l][0] = Amplitude(contents=[tf.cast( (1.0 if inner>=0 else -1.0), dtype=tf.float64)])
+                amplitude_target_l = u[0][l] * tf.cast( (1.0 if inner>=0 else -1.0) if norm_component else inner , dtype=tf.float64)
+            else:
+                amplitude_target_l = u[0][l] * tf.cast( 1.0 if norm_component else inner , dtype=tf.float64)
+            if tf.math.abs(amplitude_target_l) < threshold:
+                indices_to_remove += [l]
+            else:
+                amplitude_target += [amplitude_target_l]
+                component_target += [component_target_l]
+        for space in self.dims(False):
+            if space == 0 :
+                self.components[0] = Amplitude(contents = amplitude_target)
+            elif space != target_dim:
+                if indices_to_remove:
+                    self.components[space] = Momentum( lattice = self.components[space].lattice, contents = tf.gather(self.components[space].values(), [i for i in range(len(self)) if i not in indices_to_remove], axis=0))
+            else:
+                self.components[target_dim] = Momentum(lattice = self.components[target_dim].lattice, contents = component_target)
         return self
-
+    
     def mul(self, m , norm_ = False):
         other = self.copy()
         other.components[0] *= m
         return other
 
-    def learn(self, other , iterate = 0, alpha = 1e-9, threshold=0.):
+    def learn(self, other , iterate = 0, alpha = 1e-9, threshold=0., ):
         assert isinstance(other, Vector)
         if (len(other) == 0) or ( len(self) == 0 ) :
             return Vector()
-        u = self##train
-        v = other##origin
         q = Vector()
 
         if self.dims(True) == [1]:
             ##raw sum
-            q.components = [ Amplitude(a=1.0), Momentum(contents = [tf.math.reduce_sum(v[0]*v[1],axis=0)], lattice = self.components[1][0].lattice) ]
+            q.components = [ Amplitude(a=1.0), Momentum(contents = [tf.math.reduce_sum(other[0]*other[1],axis=0)], lattice = self.components[1].lattice) ]
             return q
-            
-        train = self.copy(False,threshold)
-        for target_dim in range( iterate * len( train.dims(True)), 0, -1):
-           train.iterate(other, alpha, target_dim, target_dim != 1)
+        train = self#.copy(False,threshold)
+        for target_dim in range( iterate * len(train.dims(True)), 0, -1):
+           train.iterate(other, alpha, target_dim, target_dim != 1, signage_test=True, threshold=threshold)
         return train
 
-    def decompose(self, partition , iterate = 0 , alpha = 1e-9):        
+    def decompose(self, partition , iterate = 0 , alpha = 1e-9, threshold:float = 0.):        
         new = self.max(min(len(self),partition))
-        return new.learn( self, iterate = iterate, alpha = alpha)
+        return new.learn( self, iterate=iterate, alpha=alpha, threshold=threshold)
 
-    def fibonacci(self, partition, level = 0, iterate=0, total_iterate=0, alpha=1e-9, total_alpha=1e-9):
+    def fibonacci(self, partition, level = 0, iterate=10, total_iterate=3, alpha=1e-9, total_alpha=1e-9, threshold=0.):
         #written with help from gemini to form recursion, 3x tries makes perfect
         #copying original Andromeda codes intent
         # 1. THE BASE CASE (Bottom of the tree)
@@ -180,7 +188,7 @@ class Vector :
         if partition <= 1 or len(self) <= 1:
             Y = Vector()
             # Decompose this specific chunk of data
-            reduced_ranks = self.decompose(partition=1, alpha=alpha, iterate=iterate)
+            reduced_ranks = self.decompose(partition=1, alpha=alpha, iterate=iterate, threshold=threshold)
             Y += reduced_ranks
             return Y
 
@@ -201,13 +209,14 @@ class Vector :
                 iterate=iterate, 
                 total_iterate=total_iterate, 
                 alpha=alpha, 
-                total_alpha=total_alpha
+                total_alpha=total_alpha, 
+                threshold=threshold
             )
             # Combine the results from the two branches
             Y += reduced_ranks
         # 3. MERGE & LEARN
         # As the branches merge back together, Y learns the combined T
-        return Y.learn(self, iterate=total_iterate, alpha=total_alpha)
+        return Y.learn(self, iterate=total_iterate, alpha=total_alpha, threshold=threshold)
             
     def dims(self, norm = True):
         """
@@ -227,7 +236,9 @@ class Vector :
         my_vector[0] -> The entire Amplitude component object
         my_vector[1] -> The entire Momentum axis component object
         """
+
         if d < 0 or d >= len(self.dims(False)):
+            print(f"Attempted to access dimension index {d}, but valid range is 0 to {len(self.dims(False))-1}")
             raise IndexError("Vector dimension index out of range")
             
         # Simply return the component object sitting at that dimension index
@@ -265,11 +276,10 @@ class Vector :
             # Sopy's Component.add() concatenates or sums the tensors
             combined_comp = self.components[d].copy().add(other.components[d])
             new.components.append(combined_comp)
-            
         return new
+    
     def __iadd__(self,other):
-        self.components += other.components
-        return self
+        return self + other
 
     def __isub__(self,other):
         return self-other
@@ -434,23 +444,18 @@ class Vector :
         return tf.convert_to_tensor([ [ self.components[d][r].sample(sample_rank=0,num_samples=1) for d in self.dims() ] for r in sample_ranks ])
 
 
-    def transpose(self, tl, lattices_dict=None):
+    def transpose(self, tl, lattices_dict):
         """
         Inputs a dictionary with integer keys, 0 = amplitude.
         Returns a lazy-evaluated Vector object.
         """
-        if lattices_dict is None:
-            lattices_dict = self.dict_lattices()
-        
         # 1. Safely extract Amplitude (Key 0)
         amplitude_comp = Amplitude(contents=tl[0])
-        
         # 2. Extract Momentum components in strict sorted order
         momentum_comps = [
             Momentum(contents=tl[key], lattice=lattices_dict[key]) 
             for key in sorted(tl.keys()) if key != 0
         ]
-        
         # 3. Assemble the core dimensions (these are your "columns")
         comps = [amplitude_comp] + momentum_comps   
         
