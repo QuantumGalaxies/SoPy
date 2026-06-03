@@ -110,9 +110,11 @@ class Amplitude :
 
 
     def __imul__(self, m):
-        self.contents *= tf.constant(m, dtype= tf.float64)
+        # Dynamically grabs float64 (or whatever the tensor currently is)
+        m_tensor = tf.cast(tf.convert_to_tensor(m), dtype=self.contents.dtype)
+        self.contents *= m_tensor
         return self
-    
+
     def __mul__(self, m):
         new = self.copy()
         new *= m

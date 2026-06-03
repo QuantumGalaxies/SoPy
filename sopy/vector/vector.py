@@ -95,6 +95,7 @@ class Vector :
     def copy(self, norm_:bool =False, threshold:float = 0.):
         new = Vector()
         for rank in self:
+            print(f"Copying rank with amplitude {rank[0]}")
             other = Vector()
             components = [rank.components[0].copy()]
             for d in self.dims(True):
@@ -103,7 +104,7 @@ class Vector :
             new += other
         if norm_:
            return other.balance(threshold)
-        return other
+        return new
         
     def balance(self, threshold = 0.):
         ranks = Vector()
@@ -285,13 +286,17 @@ class Vector :
         return self-other
 
     def __sub__(self,other):
-        kmeans = KMeans(n_clusters=min(len(self), len(other)+1), random_state=42, n_init="auto")
-        M = (self+other).dot(other, sum_ = False)
-        kmeans.fit( M)
+        if len(other) == 0:
+            return self
+        if len(self) == 0:
+            return Vector()
+        kmeans = KMeans(n_clusters=(len(self)+len(other)), random_state=42, n_init="auto")
+        M = (self+other).dot(self+other, sum_ = False)
+        kmeans.fit(M)
         new = Vector()
-        for i, other1 in zip(range(len(M)), other):
-            if kmeans.labels_[i] not in kmeans.labels_[len(self):] :
-                new.components += other1
+        for ic, canon in enumerate(self):
+            if kmeans.labels_[ic] not in kmeans.labels_[len(self):] :
+                new += canon
         return new
 
     def max(self, num = 1):
