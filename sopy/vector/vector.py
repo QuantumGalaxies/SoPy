@@ -95,7 +95,6 @@ class Vector :
     def copy(self, norm_:bool =False, threshold:float = 0.):
         new = Vector()
         for rank in self:
-            print(f"Copying rank with amplitude {rank[0]}")
             other = Vector()
             components = [rank.components[0].copy()]
             for d in self.dims(True):
