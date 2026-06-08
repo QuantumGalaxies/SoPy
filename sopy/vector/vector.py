@@ -102,7 +102,7 @@ class Vector :
             other.components = components
             new += other
         if norm_:
-           return other.balance(threshold)
+           return new.balance(threshold)
         return new
         
     def balance(self, threshold = 0.):
@@ -114,18 +114,16 @@ class Vector :
             else:
                 content = [Amplitude(a = amp)] 
             for d in self.dims(True):
-                content += [rank.components[d].copy().normalize()]
+                content += [rank.components[d].normalize()]
             new = Vector()
             new.components = [content]
-            if new.dot(rank) < 0.:
-                new *= -1.0
             ranks += new
         return ranks
 
-    def iterate(self, other, alpha:float, target_dim:int, norm_component:bool, signage_test:bool = False, threshold:float = 0.):
+    def iterate(self, other, alpha:float, target_dim:int, signage_test:bool = False, threshold:float = 0.):
         u = self##train
         v = other##origin
-        eye = tf.linalg.eye(len(u),dtype = tf.float64)            
+        eye = tf.linalg.eye(len(u),dtype = tf.float64)    
         target_dim = (target_dim % len(self.dims(True)))+1
         vec = tf.linalg.matmul(  
                tf.linalg.inv( u.dot(u,norm_ = True, exclude_dim = target_dim, sum_ = False) + alpha*eye),
@@ -136,24 +134,21 @@ class Vector :
         indices_to_remove = []
         for l in range(len(self)):
             component_target_l = (tf.transpose(tf.linalg.normalize(tf.transpose(vec[l]),axis=0)[0]))
-            inner = (tf.linalg.matmul([u[target_dim][l]], [component_target_l], transpose_a=False, transpose_b=True))[0][0]
-            if signage_test:
-                amplitude_target_l = u[0][l] * tf.cast( (1.0 if inner>=0 else -1.0) if norm_component else inner , dtype=tf.float64)
-            else:
-                amplitude_target_l = u[0][l] * tf.cast( 1.0 if norm_component else inner , dtype=tf.float64)
+            inner = (tf.linalg.matmul([vec[l]], [component_target_l], transpose_a=False, transpose_b=True))[0][0]
+            amplitude_target_l = tf.cast(inner, dtype = tf.float64)
+            
             if tf.math.abs(amplitude_target_l) < threshold:
                 indices_to_remove += [l]
             else:
-                amplitude_target += [amplitude_target_l]
+                amplitude_target += [[amplitude_target_l]]
                 component_target += [component_target_l]
-        for space in self.dims(False):
-            if space == 0 :
-                self.components[0] = Amplitude(contents = amplitude_target)
-            elif space != target_dim:
+        for space in self.dims(True):
+            if space != target_dim:
                 if indices_to_remove:
                     self.components[space] = Momentum( lattice = self.components[space].lattice, contents = tf.gather(self.components[space].values(), [i for i in range(len(self)) if i not in indices_to_remove], axis=0))
             else:
                 self.components[target_dim] = Momentum(lattice = self.components[target_dim].lattice, contents = component_target)
+        self.components[0] = Amplitude(contents = amplitude_target)
         return self
     
     def mul(self, m , norm_ = False):
@@ -161,26 +156,20 @@ class Vector :
         other.components[0] *= m
         return other
 
-    def learn(self, other , iterate = 0, alpha = 1e-9, threshold=0., ):
+    def learn(self, other , iterate = 1, alpha = 1e-9, threshold=0., signage_test : bool = False):
         assert isinstance(other, Vector)
         if (len(other) == 0) or ( len(self) == 0 ) :
             return Vector()
-        q = Vector()
-
-        if self.dims(True) == [1]:
-            ##raw sum
-            q.components = [ Amplitude(a=1.0), Momentum(contents = [tf.math.reduce_sum(other[0]*other[1],axis=0)], lattice = self.components[1].lattice) ]
-            return q
-        train = self#.copy(False,threshold)
+        train = self
         for target_dim in range( iterate * len(train.dims(True)), 0, -1):
-           train.iterate(other, alpha, target_dim, target_dim != 1, signage_test=True, threshold=threshold)
+           train.iterate(other=other, alpha=alpha, target_dim=target_dim, signage_test=signage_test, threshold=threshold)
         return train
 
-    def decompose(self, partition , iterate = 0 , alpha = 1e-9, threshold:float = 0.):        
+    def decompose(self, partition , iterate = 10 , alpha = 0, threshold:float = 0., signage_test:bool = False):        
         new = self.max(min(len(self),partition))
-        return new.learn( self, iterate=iterate, alpha=alpha, threshold=threshold)
+        return new.learn( self, iterate=iterate, alpha=alpha, threshold=threshold, signage_test=signage_test)
 
-    def fibonacci(self, partition, level = 0, iterate=10, total_iterate=3, alpha=1e-9, total_alpha=1e-9, threshold=0.):
+    def fibonacci(self, partition, level = 0, iterate=25, total_iterate=10, alpha=1e-9, total_alpha=1e-9, threshold=0.):
         #written with help from gemini to form recursion, 3x tries makes perfect
         #copying original Andromeda codes intent
         # 1. THE BASE CASE (Bottom of the tree)
@@ -242,8 +231,11 @@ class Vector :
             raise IndexError("Vector dimension index out of range")
             
         # Simply return the component object sitting at that dimension index
-        return self.components[d].values()
-
+        try:
+            return self.components[d].values()
+        except Exception as e:
+            print(f"Error accessing dimension {self.components[d]}: {e}")
+            raise
 
     # def __getitem__(self, r):
     #     """
@@ -257,8 +249,7 @@ class Vector :
     #     return [comp[r] for comp in self.components]
 
     def __imul__(self, m):
-        for r in range(len(self)):
-            self.components[0][r] *= m
+        self.components[0] *= m
         return self
 
     def __add__(self, other):
@@ -306,28 +297,32 @@ class Vector :
         """
         new = Vector()
         # Get the sorting indices directly from TensorFlow
-        sorted_indices = tf.argsort((tf.math.abs(self[0])), axis=-1, direction='ASCENDING')
-        
+        sorted_indices = tf.argsort((tf.math.abs(self[0])), axis=0, direction='ASCENDING')[-num:]
+        p = self.partition if hasattr(self, 'partition') else None
+        self.partition = len(self)
         for i, one in enumerate(self):
-            if i in sorted_indices[-num:]:  # Check if the index is in the top 'num' indices
+            if i in sorted_indices:  # Check if the index is in the top 'num' indices
                 new += one
-
+        if p is not None:
+            self.partition = p
         return new
 
     def min(self, num = 1):
         """
         min
                 
-        Returns the maximum absolute value Momentum up to 'num' elements.
+        Returns the minimum absolute value Momentum up to 'num' elements.
         """
         new = Vector()
         # Get the sorting indices directly from TensorFlow
-        sorted_indices = tf.argsort((tf.math.abs(self[0])), axis=-1, direction='ASCENDING')
-        
+        sorted_indices = tf.argsort((tf.math.abs(self[0])), axis=0, direction='ASCENDING')[-num:]
+        p = self.partition if hasattr(self, 'partition') else None
+        self.partition = len(self)
         for i, one in enumerate(self):
-            if i in sorted_indices[:num]:  # Check if the index is in the top 'num' indices
+            if i in sorted_indices:  # Check if the index is in the top 'num' indices
                 new += one
-
+        if p is not None:
+            self.partition = p
         return new
     
     def gaussian(self, a:float, positions, sigmas, ls, lattices):

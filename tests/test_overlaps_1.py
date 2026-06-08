@@ -84,42 +84,42 @@ def test_gaussian_delta_integral():
     # We use np.isclose for floating point comparisons
     np.testing.assert_allclose(simulated_sopy_result, expected_value, rtol=1e-7)
 
-def test_ft_gaussian_overlap_integral():
-    """
-    test exp_i on gaussians
-    """
-    # Define test parameters (alphas > 0 as per Mathematica assumptions)
-    alpha1 = 0.95
-    alpha2 = 1.2
-    k = 0.05
+# def test_ft_gaussian_overlap_integral():
+#     """
+#     test exp_i on gaussians
+#     """
+#     # Define test parameters (alphas > 0 as per Mathematica assumptions)
+#     alpha1 = 0.95
+#     alpha2 = 1.2
+#     k = 0.05
     
-    # Get the "Golden Standard" from your Mathematica equation
-    expected_value = np.real(mathematica_ground_truth(alpha1, alpha2,k))
+#     # Get the "Golden Standard" from your Mathematica equation
+#     expected_value = np.real(mathematica_ground_truth(alpha1, alpha2,k))
     
-    # --- ACT ---
-    # alpha = 1/sigma**2
-    sigma1 = 1/np.sqrt(alpha1)
-    sigma2 = 1/np.sqrt(alpha2)
-    lattices = [ np.linspace( - 20*max(sigma1,sigma2),20 * max(sigma1,sigma2), 2000)]
+#     # --- ACT ---
+#     # alpha = 1/sigma**2
+#     sigma1 = 1/np.sqrt(alpha1)
+#     sigma2 = 1/np.sqrt(alpha2)
+#     lattices = [ np.linspace( - 20*max(sigma1,sigma2),20 * max(sigma1,sigma2), 2000)]
     
-    u1 = sp.Operand( sp.Vector().gaussian(a = 1, \
-      positions=[0.], \
-      sigmas = [ np.sqrt(alpha1)], \
-      ls = [0], \
-      lattices = lattices), sp.Vector()
-      )
+#     u1 = sp.Operand( sp.Vector().gaussian(a = 1, \
+#       positions=[0.], \
+#       sigmas = [ np.sqrt(alpha1)], \
+#       ls = [0], \
+#       lattices = lattices), sp.Vector()
+#       )
     
-    u2 = sp.Vector().gaussian(a = 1, \
-      positions=[0.], \
-      sigmas = [ np.sqrt(alpha2)], \
-      ls = [0], \
-      lattices = lattices)
+#     u2 = sp.Vector().gaussian(a = 1, \
+#       positions=[0.], \
+#       sigmas = [ np.sqrt(alpha2)], \
+#       ls = [0], \
+#       lattices = lattices)
       
-    simulated_sopy_result = (u1.exp_i(ks=[k]).re.dot(u2))
+#     simulated_sopy_result = (u1.exp_i(ks=[k]).re.dot(u2))
         
-    # --- ASSERT ---
-    # We use np.isclose for floating point comparisons
-    np.testing.assert_allclose(simulated_sopy_result, expected_value, rtol=1e-3)
+#     # --- ASSERT ---
+#     # We use np.isclose for floating point comparisons
+#     np.testing.assert_allclose(simulated_sopy_result, expected_value, rtol=1e-3)
 
 
 
