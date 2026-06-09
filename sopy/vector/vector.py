@@ -129,35 +129,113 @@ class Vector :
         return ranks
 
     def iterate(self, other, alpha:float, target_dim:int, signage_test:bool = False, threshold:float = 0.):
-        u = self##train
-        v = other##origin
-        eye = tf.linalg.eye(len(u),dtype = tf.float64)    
-        target_dim = (target_dim % len(self.dims(True)))+1
-        vec = tf.linalg.matmul(  
-               tf.linalg.inv( u.dot(u,norm_ = True, exclude_dim = target_dim, sum_ = False) + alpha*eye),
-                tf.linalg.matmul(u.dot(v,norm_ = True, exclude_dim = target_dim, sum_ = False),
-                 tf.multiply(v[0],v[target_dim]), transpose_b = False))
-        amplitude_target = []
-        component_target = []
-        indices_to_remove = []
-        for l in range(len(self)):
-            component_target_l = (tf.transpose(tf.linalg.normalize(tf.transpose(vec[l]),axis=0)[0]))
-            inner = (tf.linalg.matmul([vec[l]], [component_target_l], transpose_a=False, transpose_b=True))[0][0]
-            amplitude_target_l = tf.cast(inner, dtype = tf.float64)
-            
-            if tf.math.abs(amplitude_target_l) < threshold:
-                indices_to_remove += [l]
-            else:
-                amplitude_target += [[amplitude_target_l]]
-                component_target += [component_target_l]
+        u = self  # train
+        v = other # origin
+        target_dim = (target_dim % len(self.dims(True))) + 1
+        
+        # 1. EXTRACT RAW TENSORS (Object-heavy prep before XLA)
+        # We assume u.dot() handles the SoPy object traversal and returns a raw tf.Tensor.
+        overlap_uu = u.dot(u, norm_=True, exclude_dim=target_dim, sum_=False)
+        overlap_uv = u.dot(v, norm_=True, exclude_dim=target_dim, sum_=False)
+        
+        # Construct the 'B' matrix for the solver: B = overlap_uv * (v[0] * v[target_dim])
+        v_mult = tf.multiply(v.components[0].values(), v.components[target_dim].values()) # Assuming values() gets the tensor
+        b_matrix = tf.linalg.matmul(overlap_uv, v_mult, transpose_b=False)
+
+        # 2. FIRE THE XLA KERNEL
+        # The CPU stops here, GPU executes the fused Tikhonov + Solve + Normalize
+        component_target, amplitude_target = self._xla_solve_and_normalize(
+            overlap_uu, b_matrix, alpha
+        )
+
+        # 3. VECTORIZED BEYLKIN-MOHLENKAMP PRUNING (No Python Loops)
+        # Squeeze amplitude to 1D for masking: shape [rank]
+        amp_1d = tf.reshape(amplitude_target, [-1])    
+    
+        # Create a boolean mask of survivors (True if >= threshold, False if pruned)
+        survivor_mask = tf.math.abs(amp_1d) >= threshold
+        
+        # Apply mask natively in VRAM (drops rows instantly)
+        final_amplitudes = tf.boolean_mask(amplitude_target, survivor_mask)
+        final_components = tf.boolean_mask(component_target, survivor_mask)
+
+        # 4. REPACK SOPY OBJECTS
+        # Update the non-target dimensions by applying the exact same survivor mask
         for space in self.dims(True):
             if space != target_dim:
-                if indices_to_remove:
-                    self.components[space] = Momentum( lattice = self.components[space].lattice, contents = tf.gather(self.components[space].values(), [i for i in range(len(self)) if i not in indices_to_remove], axis=0))
+                # We use boolean_mask instead of gather/indices_to_remove. It's faster.
+                surviving_tensors = tf.boolean_mask(self.components[space].values(), survivor_mask)
+                self.components[space] = Momentum(
+                    lattice=self.components[space].lattice, 
+                    contents=surviving_tensors
+                )
             else:
-                self.components[target_dim] = Momentum(lattice = self.components[target_dim].lattice, contents = component_target)
-        self.components[0] = Amplitude(contents = amplitude_target)
+                self.components[target_dim] = Momentum(
+                    lattice=self.components[target_dim].lattice, 
+                    contents=final_components
+                )
+                
+        self.components[0] = Amplitude(contents=final_amplitudes)
+        
         return self
+
+    @staticmethod
+    @tf.function(jit_compile=True)
+    def _xla_solve_and_normalize(overlap_uu, b_matrix, alpha):
+        """
+        FUSED XLA KERNEL
+        This executes the linear system and normalizations strictly in C++/CUDA.
+        No python lists, no inv(), no explicit loops.
+        """
+        # 1. Tikhonov Regularization (Drain the Swamp)
+        # We dynamically get the dimension size to build the identity matrix
+        dim_size = tf.shape(overlap_uu)[-1]
+        eye = tf.linalg.eye(dim_size, dtype=tf.float64)
+        A = overlap_uu + (tf.cast(alpha, tf.float64) * eye)
+
+        # 2. The Linear Solve (Replaces tf.linalg.inv + tf.linalg.matmul)
+        # Solves A * vec = b_matrix. This is numerically stable and incredibly fast on GPUs.
+        vec = tf.linalg.solve(A, b_matrix)
+
+        # 3. Vectorized Normalization
+        # tf.linalg.normalize returns the normalized tensor AND its norms. 
+        # Mathematically, inner = vec_l . (vec_l / ||vec_l||) is EXACTLY the L2 norm.
+        # We get the components and the amplitudes in one single, parallelized shot.
+        component_target, norms = tf.linalg.normalize(vec, axis=1)
+        amplitude_target = tf.cast(norms, dtype=tf.float64)
+
+        return component_target, amplitude_target
+    
+    # def iterate(self, other, alpha:float, target_dim:int, signage_test:bool = False, threshold:float = 0.):
+    #     u = self##train
+    #     v = other##origin
+    #     eye = tf.linalg.eye(len(u),dtype = tf.float64)    
+    #     target_dim = (target_dim % len(self.dims(True)))+1
+    #     vec = tf.linalg.matmul(  
+    #            tf.linalg.inv( u.dot(u,norm_ = True, exclude_dim = target_dim, sum_ = False) + alpha*eye),
+    #             tf.linalg.matmul(u.dot(v,norm_ = True, exclude_dim = target_dim, sum_ = False),
+    #              tf.multiply(v[0],v[target_dim]), transpose_b = False))
+    #     amplitude_target = []
+    #     component_target = []
+    #     indices_to_remove = []
+    #     for l in range(len(self)):
+    #         component_target_l = (tf.transpose(tf.linalg.normalize(tf.transpose(vec[l]),axis=0)[0]))
+    #         inner = (tf.linalg.matmul([vec[l]], [component_target_l], transpose_a=False, transpose_b=True))[0][0]
+    #         amplitude_target_l = tf.cast(inner, dtype = tf.float64)
+            
+    #         if tf.math.abs(amplitude_target_l) < threshold:
+    #             indices_to_remove += [l]
+    #         else:
+    #             amplitude_target += [[amplitude_target_l]]
+    #             component_target += [component_target_l]
+    #     for space in self.dims(True):
+    #         if space != target_dim:
+    #             if indices_to_remove:
+    #                 self.components[space] = Momentum( lattice = self.components[space].lattice, contents = tf.gather(self.components[space].values(), [i for i in range(len(self)) if i not in indices_to_remove], axis=0))
+    #         else:
+    #             self.components[target_dim] = Momentum(lattice = self.components[target_dim].lattice, contents = component_target)
+    #     self.components[0] = Amplitude(contents = amplitude_target)
+    #     return self
     
     def mul(self, m , norm_ = False):
         other = self.copy()
@@ -435,7 +513,7 @@ class Vector :
                 new += canon
         return new
 
-    def max(self, num = 1):
+    def max(self, canon = 1):
         """
         max
                 
@@ -443,13 +521,13 @@ class Vector :
         """
         new = Vector()
         # Get the sorting indices directly from TensorFlow
-        sorted_indices = tf.argsort((tf.math.abs(self[0])), axis=0, direction='ASCENDING')[-num:]
+        sorted_indices = tf.argsort((tf.math.abs(self[0])), axis=0, direction='ASCENDING')[-canon:]
         for i, one in enumerate(self.iter_all()):
             if i in sorted_indices:  # Check if the index is in the top 'num' indices
                 new += one
         return new
 
-    def min(self, num = 1):
+    def min(self, canon = 1):
         """
         min
                 
@@ -457,7 +535,7 @@ class Vector :
         """
         new = Vector()
         # Get the sorting indices directly from TensorFlow
-        sorted_indices = tf.argsort((tf.math.abs(self[0])), axis=0, direction='ASCENDING')[-num:]
+        sorted_indices = tf.argsort((tf.math.abs(self[0])), axis=0, direction='ASCENDING')[-canon:]
         self.set_partition = False
         for i, one in enumerate(self):
             if i in sorted_indices:  # Check if the index is in the top 'num' indices
