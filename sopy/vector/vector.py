@@ -7,6 +7,8 @@
 ##           (2023,2024,2025)                 ##
 ################################################
 
+from os import stat
+
 from .. import Amplitude
 from .. import Momentum
 import tensorflow as tf
@@ -34,6 +36,12 @@ class Vector :
 
     def dist( self, other):
         return tf.math.sqrt(tf.math.abs(self.dot(self) + other.dot(other) - self.dot(other) - other.dot(self)))
+
+    def n_dist( self, other):
+        a = self.mul(1/self.n())
+        b = other.mul(1/other.n())
+        return tf.math.sqrt(tf.math.abs(a.dot(b) + b.dot(b) - a.dot(b) - b.dot(a)))
+
 
     def ld1(self):
         return tf.math.reduce_sum(tf.math.abs(self[0]))
@@ -165,19 +173,123 @@ class Vector :
            train.iterate(other=other, alpha=alpha, target_dim=target_dim, signage_test=signage_test, threshold=threshold)
         return train
 
-    def decompose(self, partition , iterate = 10 , alpha = 0, threshold:float = 0., signage_test:bool = False):        
-        new = self.max(min(len(self),partition))
-        return new.learn( self, iterate=iterate, alpha=alpha, threshold=threshold, signage_test=signage_test)
+    def Decompose(self, other, ambiguity_rate, alpha=1e-5, tune_rate=0.01, iterate=10,max_allowed_distance=2.0):
+        """
+        Full pipeline: Learns the input, conditionally tunes to target ambiguity, and reduces rank.
+        """
+        # Step 1: Update
+        tolerance = ambiguity_rate * 0.1  # Set tolerance as a fraction of ambiguity rate
+        update_dist, was_updated = self.update(other, learn_rate=alpha, tolerance=tolerance, iterate=iterate)
+        
+        # Step 2: Conditional Tune ("If it calls for it")
+        # We define a tiny threshold to prevent micro-tuning if it is already close enough
+        epsilon = ambiguity_rate * 0.05 # 5% of the ambiguity rate as a threshold for tuning
+        if abs(update_dist - ambiguity_rate) > epsilon:
+            tune_dist = self.tune(other, ambiguity_rate=ambiguity_rate, tune_rate=tune_rate)
+            was_tuned = True
+        else:
+            # Skip tuning, pass the current distance forward
+            tune_dist = update_dist
+            was_tuned = False
+            
+        # Step 3: Reduce
+        final_rank, reduction_error = self.reduce_to_target_distance(
+            max_allowed_distance=max_allowed_distance, 
+            iterations=iterate,
+            ambiguity_rate=ambiguity_rate,
+            tune_rate=tune_rate,
+            alpha=alpha,
+        )
+        
+        # Step 4: Rich Reporting
+        return {
+            "update_distance": update_dist,
+            "was_updated": was_updated,
+            "was_tuned": was_tuned,
+            "post_tune_distance": tune_dist,
+            "final_rank": final_rank,
+            "reduction_error": reduction_error,
+            "reduction_stable": reduction_error <= max_allowed_distance 
+        }
 
-    def fibonacci(self, partition, level = 0, iterate=25, total_iterate=10, alpha=1e-9, total_alpha=1e-9, threshold=0.):
+    def update(self, input_vector, learn_rate, tolerance=0.0, iterate=1):
+        """
+        Standard update procedure with early stopping to reduce over-learning.
+        """
+        current_dist = self.dist(input_vector)
+        
+        if current_dist <= tolerance:
+            return current_dist, False 
+            
+        self = self.learn(input_vector, alpha=learn_rate/100, iterate=iterate)
+        return self.dist(input_vector), True
+
+    def tune(self, input_vector, ambiguity_rate, tune_rate=0.01):
+        """
+        Tunes the vector state so that output.dist(input) ~ ambiguity_rate.
+        """
+        current_dist = self.dist(input_vector)
+        dist_error = current_dist - ambiguity_rate
+        effective_alpha = tune_rate * dist_error
+        
+        self = self.learn(input_vector, alpha=abs(effective_alpha), iterate=1)
+        return self.dist(input_vector)
+
+    def reduce_to_target_distance(self, max_allowed_distance, iterations=10, ambiguity_rate=0.1, tune_rate=0.01, alpha=1e-5):
+        """
+        Binary searches for the smallest Target Partition Size that keeps
+        the reduction error (distance to original) <= max_allowed_distance.
+        """
+        current_rank = len(self)
+        if current_rank <= 1:
+            return current_rank, 0.0
+
+        original_vector = self
+        
+        low = 1
+        high = current_rank
+        best_canon = current_rank
+        best_reduced_vector = self
+        final_dist = 0.0
+        
+        while low <= high:
+            mid_canon = (low + high) // 2
+            
+            test_vector = original_vector.Fibonacci(
+                canon=mid_canon, 
+                iterate=iterations, 
+                total_iterate=iterations,
+                alpha=alpha,
+                total_alpha=alpha,
+                ambiguity_rate=ambiguity_rate,
+                tune_rate=tune_rate,
+                max_allowed_distance=max_allowed_distance
+            )
+            
+            current_dist = test_vector.n_dist(original_vector)
+            
+            if current_dist <= max_allowed_distance:
+                # Acceptable error, save state, try smaller canon
+                best_canon = mid_canon
+                best_reduced_vector = test_vector
+                final_dist = current_dist
+                high = mid_canon - 1
+            else:
+                # Error too high, need larger canon
+                low = mid_canon + 1
+                
+        self = best_reduced_vector
+        return best_canon, final_dist
+    
+    def fibonacci(self, canon, level = 0, iterate=25, total_iterate=10, alpha=1e-9, total_alpha=1e-9, threshold=0.):
         #written with help from gemini to form recursion, 3x tries makes perfect
         #copying original Andromeda codes intent
         # 1. THE BASE CASE (Bottom of the tree)
-        # If we only want 1 partition (or the data is too small to split), stop dividing.
-        if partition <= 1 or len(self) <= 1:
+        # If we only want 1 canon (or the data is too small to split), stop dividing.
+        if canon <= 1 or len(self) <= 1:
             Y = Vector()
             # Decompose this specific chunk of data
-            reduced_ranks = self.decompose(partition=1, alpha=alpha, iterate=iterate, threshold=threshold)
+            reduced_ranks = self.decompose(canon=1, alpha=alpha, iterate=iterate, threshold=threshold)
             Y += reduced_ranks
             return Y
 
@@ -186,14 +298,10 @@ class Vector :
                 
         # We always split into exactly 2 at this level.
         # This creates the 2 -> 4 -> 8 -> 16 doubling effect as it recurses.
-        
-        all_ranks = {}
-        for i,like_ranks in enumerate(self.set(partition=2)):
-            all_ranks[i] = like_ranks
-        
-        for i in range(2):
-            reduced_ranks = all_ranks[i].fibonacci(
-                partition=partition // 2 + i * ( partition % 2 ) , 
+                
+        for all_ranks in self.set(partition=2):
+            reduced_ranks = all_ranks.fibonacci(
+                canon=canon // 2 + i * ( canon % 2 ) , 
                 level = level+1,
                 iterate=iterate, 
                 total_iterate=total_iterate, 
@@ -207,6 +315,44 @@ class Vector :
         # As the branches merge back together, Y learns the combined T
         return Y.learn(self, iterate=total_iterate, alpha=total_alpha, threshold=threshold)
             
+    def Fibonacci(self, canon=None, ambiguity_rate = 0.1,  level = 0, iterate=10, total_iterate=3, alpha=1e-9, total_alpha=1e-9, tune_rate=0.01, max_allowed_distance=2.0):
+        #written with help from gemini to form recursion, 3x tries makes perfect
+        #copying original Andromeda codes intent
+        # 1. THE BASE CASE (Bottom of the tree)
+        # If we only want 1 canon (or the data is too small to split), stop dividing.
+        if canon is None:
+            canon = len(self)
+    
+        if canon <= 1 or len(self) <= 1:
+            Y = self.max(1)
+            # Decompose this specific chunk of data
+            stats = Y.Decompose(self, alpha=alpha, iterate=iterate, ambiguity_rate=ambiguity_rate, tune_rate=tune_rate)
+            return Y
+        
+        # 2. THE RECURSIVE CASE (The "Doubling" step)
+        Y = Vector()
+                
+        # We always split into exactly 2 at this level.
+        # This creates the 2 -> 4 -> 8 -> 16 doubling effect as it recurses.
+                
+        for all_ranks in self.set(partition=2):
+            reduced_ranks = all_ranks.Fibonacci(
+                canon=canon // 2 , 
+                level = level+1,
+                iterate=iterate, 
+                total_iterate=total_iterate, 
+                alpha=alpha, 
+                total_alpha=total_alpha, 
+                ambiguity_rate=ambiguity_rate,
+                tune_rate=tune_rate,
+            )
+            # Combine the results from the two branches
+            Y += reduced_ranks
+        # 3. MERGE & LEARN
+        # As the branches merge back together, Y learns the combined T
+        stats =  Y.Decompose(self, ambiguity_rate=ambiguity_rate, tune_rate=tune_rate, iterate=total_iterate, alpha=total_alpha, max_allowed_distance=max_allowed_distance)
+        return Y
+
     def dims(self, norm = True):
         """
         an iterator for N 
@@ -298,13 +444,9 @@ class Vector :
         new = Vector()
         # Get the sorting indices directly from TensorFlow
         sorted_indices = tf.argsort((tf.math.abs(self[0])), axis=0, direction='ASCENDING')[-num:]
-        p = self.partition if hasattr(self, 'partition') else None
-        self.partition = len(self)
-        for i, one in enumerate(self):
+        for i, one in enumerate(self.iter_all()):
             if i in sorted_indices:  # Check if the index is in the top 'num' indices
                 new += one
-        if p is not None:
-            self.partition = p
         return new
 
     def min(self, num = 1):
@@ -316,13 +458,10 @@ class Vector :
         new = Vector()
         # Get the sorting indices directly from TensorFlow
         sorted_indices = tf.argsort((tf.math.abs(self[0])), axis=0, direction='ASCENDING')[-num:]
-        p = self.partition if hasattr(self, 'partition') else None
-        self.partition = len(self)
+        self.set_partition = False
         for i, one in enumerate(self):
             if i in sorted_indices:  # Check if the index is in the top 'num' indices
                 new += one
-        if p is not None:
-            self.partition = p
         return new
     
     def gaussian(self, a:float, positions, sigmas, ls, lattices):
@@ -353,19 +492,26 @@ class Vector :
         # 4. Mathematically unify it with your current state via your component-wise __add__
         return self + new
     def set(self,partition):
+        self.set_partition = True
         self.partition = partition
         return self
     
+    def iter_all(self):
+        self.set_partition = False
+        return self
+
     def __iter__(self):
+
         try:
             self.partition
         except:
             self.partition = len(self)
+            self.set_partition = False
 
         # 1. Handle standard initialization variables cleanly
         self.index = 0
         
-        if self.partition == len(self):
+        if not self.set_partition:
             # If partitioning isn't requested, labels are just sequential indices
             self.labels = list(range(len(self)))
             return self
