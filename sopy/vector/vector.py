@@ -341,10 +341,12 @@ class Vector :
                 total_alpha=alpha,
                 ambiguity_rate=ambiguity_rate,
                 tune_rate=tune_rate,
-                max_allowed_distance=max_allowed_distance
+                max_allowed_distance=2.0
             )
-            
-            current_dist = test_vector.n_dist(original_vector)
+            if len(test_vector) == 0:
+                current_dist = original_vector.n()
+            else:
+                current_dist = test_vector.n_dist(original_vector)
             
             if current_dist <= max_allowed_distance:
                 # Acceptable error, save state, try smaller canon
@@ -359,39 +361,38 @@ class Vector :
         self = best_reduced_vector
         return best_canon, final_dist
     
-    def fibonacci(self, canon, level = 0, iterate=25, total_iterate=10, alpha=1e-9, total_alpha=1e-9, threshold=0.):
-        #written with help from gemini to form recursion, 3x tries makes perfect
-        #copying original Andromeda codes intent
-        # 1. THE BASE CASE (Bottom of the tree)
-        # If we only want 1 canon (or the data is too small to split), stop dividing.
-        if canon <= 1 or len(self) <= 1:
-            Y = Vector()
-            # Decompose this specific chunk of data
-            reduced_ranks = self.decompose(canon=1, alpha=alpha, iterate=iterate, threshold=threshold)
-            Y += reduced_ranks
-            return Y
+    # def fibonacci(self, canon, level = 0, iterate=25, total_iterate=10, alpha=1e-9, total_alpha=1e-9, threshold=0.):
+    #     #written with help from gemini to form recursion, 3x tries makes perfect
+    #     #copying original Andromeda codes intent
+    #     # 1. THE BASE CASE (Bottom of the tree)
+    #     # If we only want 1 canon (or the data is too small to split), stop dividing.
+    #     if canon <= 1 or len(self) <= 1:
+    #         Y = Vector()
+    #         # Decompose this specific chunk of data
+    #         stats = Y.Decompose(self, alpha=alpha, iterate=iterate, ambiguity_rate=ambiguity_rate, tune_rate=tune_rate)
+    #         return Y
 
-        # 2. THE RECURSIVE CASE (The "Doubling" step)
-        Y = Vector()
+    #     # 2. THE RECURSIVE CASE (The "Doubling" step)
+    #     Y = Vector()
                 
-        # We always split into exactly 2 at this level.
-        # This creates the 2 -> 4 -> 8 -> 16 doubling effect as it recurses.
+    #     # We always split into exactly 2 at this level.
+    #     # This creates the 2 -> 4 -> 8 -> 16 doubling effect as it recurses.
                 
-        for all_ranks in self.set(partition=2):
-            reduced_ranks = all_ranks.fibonacci(
-                canon=canon // 2 + i * ( canon % 2 ) , 
-                level = level+1,
-                iterate=iterate, 
-                total_iterate=total_iterate, 
-                alpha=alpha, 
-                total_alpha=total_alpha, 
-                threshold=threshold
-            )
-            # Combine the results from the two branches
-            Y += reduced_ranks
-        # 3. MERGE & LEARN
-        # As the branches merge back together, Y learns the combined T
-        return Y.learn(self, iterate=total_iterate, alpha=total_alpha, threshold=threshold)
+    #     for all_ranks in self.set(partition=2):
+    #         reduced_ranks = all_ranks.fibonacci(
+    #             canon=canon // 2 + i * ( canon % 2 ) , 
+    #             level = level+1,
+    #             iterate=iterate, 
+    #             total_iterate=total_iterate, 
+    #             alpha=alpha, 
+    #             total_alpha=total_alpha, 
+    #             threshold=threshold
+    #         )
+    #         # Combine the results from the two branches
+    #         Y += reduced_ranks
+    #     # 3. MERGE & LEARN
+    #     # As the branches merge back together, Y learns the combined T
+    #     return Y.learn(self, iterate=total_iterate, alpha=total_alpha, threshold=threshold)
             
     def Fibonacci(self, canon=None, ambiguity_rate = 0.1,  level = 0, iterate=10, total_iterate=3, alpha=1e-9, total_alpha=1e-9, tune_rate=0.01, max_allowed_distance=2.0):
         #written with help from gemini to form recursion, 3x tries makes perfect
