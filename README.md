@@ -88,7 +88,7 @@ Get the Euclidean distance from vector v-k and q
 
 Reduce v with Fibonacci procedure
 
-	[ v.Fibonacci(ambiguity_rate=0.1).dist(v) for partition in range(1,len(v))]
+	v.Fibonacci(ambiguity_rate=0.1).dist(v)
 
 The ambiguity rate will keep things real under recursive iterations driven by external programs.
 
