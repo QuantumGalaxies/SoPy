@@ -27,8 +27,7 @@ my_vector = sp.Vector().transpose(spatial_data, lattices_dict)
 
 # 3. Decompose
 # Reduces the rank using default algorithms
-decomposed_vector = my_vector.decompose(2, iterate=100)
-fibonacci_vector = my_vector.fibonacci(2, iterate=10)
+fibonacci_vector = my_vector.Fibonacci(ambiguity_rate = 0)
 
 # 4. Access Results
 print(f"Original Rank: {len(my_vector)}")
