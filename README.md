@@ -88,15 +88,9 @@ Get the Euclidean distance from vector v-k and q
 
 Reduce v with Fibonacci procedure
 
-	[ v.fibonacci( partition = partition, iterate = 10, total_iterate = 10).dist(v) for partition in range(1,len(v))]
+	[ v.Fibonacci(ambiguity_rate=0.1).dist(v) for partition in range(1,len(v))]
 
-Compare with standard approaches
-
-	[ v.decompose( partition = partition, iterate = 10).dist(v) for partition in range(1,len(v))]
-
-Use boost
-
-	[ v.boost().fibonacci(  partition = partition, iterate = 10 ,alpha = 1e-2).unboost().dist(v) for partition in range(1,len(v))]
+The ambiguity rate will keep things real under recursive iterations driven by external programs.
 
 ### How to Contribute
 * Develop amplitude/component to various non-local resources
