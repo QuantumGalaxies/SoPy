@@ -124,7 +124,7 @@ class Vector :
             for d in self.dims(True):
                 content += [rank.components[d].normalize()]
             new = Vector()
-            new.components = [content]
+            new.components = content
             ranks += new
         return ranks
 
