@@ -105,6 +105,6 @@ The ambiguity rate will keep things real under recursive iterations driven by ex
 
 [ SoPy Website ](https://sopy.quantumgalaxies.org)
 
-[ Quantum Galaxies Articles ](https://www.quantumgalaxies.org/articles)
+[ Quantum Galaxies Articles ](https://www.quantumgalaxies.org)
 
 [ Quantum Galaxies Corporation ](https://www.quantumgalaxies.com)
