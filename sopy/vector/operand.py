@@ -21,6 +21,8 @@ class Operand():
     def copy(self, norm_ = True, threshold = 0.):
         return Operand(self.re.copy(norm_ = norm_, threshold = threshold), self.im.copy(norm_=norm_, threshold = threshold))
         
+    def __len__(self):
+        return (len(self.re)+len(self.im))
         
     def complex1(self,  ctl1, ext_i, mask = [] , dict_lattices = None):
         """
@@ -240,7 +242,7 @@ class Operand():
         f = Operand( Vector().flat(lattices) , Vector().flat(lattices))
         return self.cdot(f)
 
-    def cot(self, other):
+    def dot(self, other):
         """complex outer product"""
         return self.cdot(other)
 
@@ -248,3 +250,52 @@ class Operand():
         """complex dot product"""
         return complex( self.re.dot(other.re) + self.im.dot(other.im) , self.im.dot(other.re) - self.re.dot(other.im) ) 
 
+    def __imul__(self, c):
+        if abs(c) == 0:
+            return Operand( Vector(), Vector())
+        if abs( tf.math.imag(c)) < 1e-6 :
+           re = tf.math.real(c)
+           im = None
+        elif abs( tf.math.real(c)) < 1e-6 :
+           im = tf.math.imag(c)
+           re = None
+        else:
+           re = tf.math.real(c)
+           im = tf.math.imag(c)
+
+        if re is not None:
+            self.re *= re
+            self.im *= re
+            return self
+        if im is not None:
+            self.re *= im
+            self.im *= -im
+            return self.swap()
+        return Operand( self.re.mul(re) - self.im.mul(im), self.re.mul(im) + self.im.mul(re))
+
+
+    def swap(self):
+       self.re, self.im = self.im, self.re
+       return self
+    
+    def __iadd__(self, other):
+        self.re += other.re
+        self.im += other.im
+        return self
+    
+    def Fibonacci(self, canon=None, ambiguity_rate = 0.1,  level = 0, iterate=10, total_iterate=3, alpha=1e-9, total_alpha=1e-9, tune_rate=0.01, max_allowed_distance=2.0):
+        return Operand( self.re.Fibonacci(canon, ambiguity_rate, level, iterate, total_iterate, alpha, total_alpha, tune_rate),
+                        self.im.Fibonacci(canon, ambiguity_rate, level, iterate, total_iterate, alpha, total_alpha, tune_rate)
+        )
+    
+    def mul(self, re):
+       self *= re
+       return self
+
+    def n(self):
+       return tf.math.real(tf.math.sqrt( self.dot(self) ) )
+    
+    def __sub__(self, spc):
+       self.re -= spc.re
+       self.im -= spc.im
+       return self

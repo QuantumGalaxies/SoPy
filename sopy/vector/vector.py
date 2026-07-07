@@ -102,13 +102,14 @@ class Vector :
 
     def copy(self, norm_:bool =False, threshold:float = 0.):
         new = Vector()
-        for rank in self:
-            other = Vector()
-            components = [rank.components[0].copy()]
-            for d in self.dims(True):
-                components += [rank.components[d].copy()]
-            other.components = components
-            new += other
+        if not self.components:
+            return new
+        if len(self) == 0:
+            return new
+        components = [self.components[0].copy()]
+        for d in self.dims(True):
+            components += [self.components[d].copy()]
+        new.components = components
         if norm_:
            return new.balance(threshold)
         return new
@@ -505,8 +506,8 @@ class Vector :
             return self
         if len(self) == 0:
             return Vector()
-        kmeans = KMeans(n_clusters=(len(self)+len(other)), random_state=42, n_init="auto")
-        M = (self+other).dot(self+other, sum_ = False)
+        kmeans = KMeans(n_clusters=min(len(self), len(other)+1), random_state=42, n_init="auto")
+        M = (self+other).dot(other, sum_ = False)
         kmeans.fit(M)
         new = Vector()
         for ic, canon in enumerate(self):
