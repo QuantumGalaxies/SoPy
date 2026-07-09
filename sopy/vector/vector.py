@@ -116,14 +116,20 @@ class Vector :
         
     def balance(self, threshold = 0.):
         ranks = Vector()
-        for rank in self:
+        for i,rank in enumerate(self):
             amp = rank.n()
-            if tf.math.abs(amp) < threshold:
-                continue
+            if (tf.math.is_nan(amp) or (amp == 0.)).numpy() :
+                ## sometimes i pass in a single zero term
+                content = [Amplitude(a=0)]
+                for d in self.dims(True):
+                    content += [rank.components[d].flat()]
             else:
-                content = [Amplitude(a = amp)] 
-            for d in self.dims(True):
-                content += [rank.components[d].normalize()]
+                if tf.math.abs(amp) < threshold:
+                    continue
+                else:
+                    content = [Amplitude(a = amp)] 
+                for d in self.dims(True):
+                    content += [rank.components[d].normalize()]
             new = Vector()
             new.components = content
             ranks += new
