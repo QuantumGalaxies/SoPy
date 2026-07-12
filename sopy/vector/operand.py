@@ -15,14 +15,28 @@ class Operand():
     def __init__(self, re, im):
         assert isinstance( re , Vector)
         assert isinstance( im , Vector)
-        self.re = re.copy(True)
-        self.im = im.copy(True)
-    
+        self.re = re
+        self.im = im
+
+    def balance(self, threshold : float = 0.):
+        if (len(self.re) == 0) and (len(self.im)==0):
+            return self
+
+
+
+        if len(self.im) == 0: 
+            self.im = self.re.max(1).mul(0.)
+        elif len(self.re) == 0:
+            self.re = self.im.max(1).mul(0.)
+        self.re = self.re.balance(threshold)
+        self.im = self.im.balance(threshold)
+        return self
+
     def copy(self, norm_ = True, threshold = 0.):
         return Operand(self.re.copy(norm_ = norm_, threshold = threshold), self.im.copy(norm_=norm_, threshold = threshold))
         
     def __len__(self):
-        return (len(self.re)+len(self.im))
+        return 8*(len(self.re)+len(self.im))
         
     def complex1(self,  ctl1, ext_i, mask = [] , dict_lattices = None):
         """
@@ -284,8 +298,8 @@ class Operand():
         return self
     
     def Fibonacci(self, canon=None, ambiguity_rate = 0.1,  level = 0, iterate=10, total_iterate=3, alpha=1e-9, total_alpha=1e-9, tune_rate=0.01, max_allowed_distance=2.0):
-        return Operand( self.re.Fibonacci(canon, ambiguity_rate, level, iterate, total_iterate, alpha, total_alpha, tune_rate),
-                        self.im.Fibonacci(canon, ambiguity_rate, level, iterate, total_iterate, alpha, total_alpha, tune_rate)
+        return Operand( self.re.Fibonacci(canon=canon, ambiguity_rate=ambiguity_rate, level=level, iterate=iterate, total_iterate=total_iterate, alpha=alpha, total_alpha=total_alpha, tune_rate=tune_rate),
+                        self.im.Fibonacci(canon=canon, ambiguity_rate=ambiguity_rate, level=level, iterate=iterate, total_iterate=total_iterate, alpha=alpha, total_alpha=total_alpha, tune_rate=tune_rate)
         )
     
     def mul(self, re):

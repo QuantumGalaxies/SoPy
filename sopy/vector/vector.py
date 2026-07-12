@@ -76,6 +76,8 @@ class Vector :
                 for dim in vector1.dims(norm_):
                     if dim != exclude_dim:
                       uv += [tf.matmul(vector1[dim],vector2[dim], transpose_b = True)]
+                if any(tf.reduce_any(tf.math.is_nan(tensor)) for tensor in uv):
+                    print("Warning: NaN detected in inner product components!")
                 return tf.math.reduce_prod(tf.convert_to_tensor(uv),axis=0)
 
             def innert2(vector1, vector2, vector3):
@@ -118,7 +120,7 @@ class Vector :
         ranks = Vector()
         for i,rank in enumerate(self):
             amp = rank.n()
-            if (tf.math.is_nan(amp) or (amp == 0.)).numpy() :
+            if (tf.math.is_nan(amp) or (amp == 0.)).numpy() and (i == 0):
                 ## sometimes i pass in a single zero term
                 content = [Amplitude(a=0)]
                 for d in self.dims(True):
@@ -253,10 +255,22 @@ class Vector :
         assert isinstance(other, Vector)
         if (len(other) == 0) or ( len(self) == 0 ) :
             return Vector()
+        
         train = self
-        for target_dim in range( iterate * len(train.dims(True)), 0, -1):
-           train.iterate(other=other, alpha=alpha, target_dim=target_dim, signage_test=signage_test, threshold=threshold)
+        valid_dims = train.dims(True) # Get actual dimensions (e.g., [1, 2, 3])
+        # Loop explicitly through your sweep passes
+        for step in range(iterate):
+            # Sweep backwards through actual dimension indices cleanly
+            for d in reversed(valid_dims):
+                train.iterate(
+                    other=other, 
+                    alpha=alpha, 
+                    target_dim=d, 
+                    signage_test=signage_test, 
+                    threshold=threshold
+                )
         return train
+
 
     def Decompose(self, other, ambiguity_rate, alpha=1e-5, tune_rate=0.01, iterate=10,max_allowed_distance=2.0):
         """
@@ -401,43 +415,50 @@ class Vector :
     #     # As the branches merge back together, Y learns the combined T
     #     return Y.learn(self, iterate=total_iterate, alpha=total_alpha, threshold=threshold)
             
-    def Fibonacci(self, canon=None, ambiguity_rate = 0.1,  level = 0, iterate=10, total_iterate=3, alpha=1e-9, total_alpha=1e-9, tune_rate=0.01, max_allowed_distance=2.0):
-        #written with help from gemini to form recursion, 3x tries makes perfect
-        #copying original Andromeda codes intent
-        # 1. THE BASE CASE (Bottom of the tree)
-        # If we only want 1 canon (or the data is too small to split), stop dividing.
+    def Fibonacci(self, canon=None, ambiguity_rate = 0.1, level = 0, iterate=10, total_iterate=3, alpha=1e-9, total_alpha=1e-9, tune_rate=0.01, max_allowed_distance=2.0, max_level=10):
+        if level > max_level:
+            print(f"Recursion safety limit reached at level {level}! Breaking out.")
+            return self    
         if canon is None:
             canon = len(self)
-    
+        if self.n() < ambiguity_rate:
+            if len(self)>0:
+                if canon is not None:
+                    return self.max(canon)
+                else:
+                    return self.max(1)
+            else:
+                return self
+        # 1. THE BASE CASE (Bottom of the tree)
         if canon <= 1 or len(self) <= 1:
-            Y = self.max(1)
-            # Decompose this specific chunk of data
+            Y = self.max(max(1,canon))
             stats = Y.Decompose(self, alpha=alpha, iterate=iterate, ambiguity_rate=ambiguity_rate, tune_rate=tune_rate)
+               
             return Y
         
         # 2. THE RECURSIVE CASE (The "Doubling" step)
         Y = Vector()
                 
-        # We always split into exactly 2 at this level.
-        # This creates the 2 -> 4 -> 8 -> 16 doubling effect as it recurses.
-                
-        for all_ranks in self.set(partition=2):
-            reduced_ranks = all_ranks.Fibonacci(
-                canon=canon // 2 , 
-                level = level+1,
-                iterate=iterate, 
-                total_iterate=total_iterate, 
-                alpha=alpha, 
-                total_alpha=total_alpha, 
-                ambiguity_rate=ambiguity_rate,
-                tune_rate=tune_rate,
-            )
-            # Combine the results from the two branches
-            Y += reduced_ranks
+        for i, all_ranks in enumerate(self.set(partition=2)):
+            if len(all_ranks) > 0:
+                reduced_ranks = all_ranks.Fibonacci(
+                    canon=max(1, canon // 2 + i * (canon % 2)), 
+                    level=level + 1,
+                    iterate=iterate, 
+                    total_iterate=total_iterate, 
+                    alpha=alpha, 
+                    total_alpha=total_alpha, 
+                    ambiguity_rate=ambiguity_rate,
+                    tune_rate=tune_rate,
+                )
+                Y += reduced_ranks
+
         # 3. MERGE & LEARN
-        # As the branches merge back together, Y learns the combined T
-        stats =  Y.Decompose(self, ambiguity_rate=ambiguity_rate, tune_rate=tune_rate, iterate=total_iterate, alpha=total_alpha, max_allowed_distance=max_allowed_distance)
+        stats = Y.Decompose(self, ambiguity_rate=ambiguity_rate, tune_rate=tune_rate, iterate=total_iterate, alpha=total_alpha, max_allowed_distance=max_allowed_distance)
+        
+        print("ambiguity_rate", ambiguity_rate, self.dist(Y))
         return Y
+
 
     def dims(self, norm = True):
         """
@@ -466,7 +487,7 @@ class Vector :
         try:
             return self.components[d].values()
         except Exception as e:
-            print(f"Error accessing dimension {self.components[d]}: {e}")
+            print(f"Error accessing dimension {d}: {e}")
             raise
 
     # def __getitem__(self, r):
@@ -527,12 +548,20 @@ class Vector :
                 
         Returns the maximum absolute value Momentum up to 'num' elements.
         """
+
+        # Guard clause: Check if the vector is empty
+        if len(self) == 0:
+            raise ValueError("Cannot call max() on an empty Vector.")
+
+
         new = Vector()
         # Get the sorting indices directly from TensorFlow
         sorted_indices = tf.argsort((tf.math.abs(self[0])), axis=0, direction='ASCENDING')[-canon:]
         for i, one in enumerate(self.iter_all()):
             if i in sorted_indices:  # Check if the index is in the top 'num' indices
                 new += one
+        if len(new)==0:
+            return one
         return new
 
     def min(self, canon = 1):
