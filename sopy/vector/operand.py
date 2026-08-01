@@ -303,11 +303,12 @@ class Operand():
         )
     
     def mul(self, re):
-       self *= re
-       return self
+        other = self.copy()
+        other *= re
+        return other
 
     def n(self):
-       return tf.math.real(tf.math.sqrt( self.dot(self) ) )
+        return tf.math.real(tf.math.sqrt( self.dot(self) ) )
     
     def __sub__(self, spc):
        self.re -= spc.re
