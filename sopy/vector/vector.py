@@ -134,7 +134,10 @@ class Vector :
                     content += [rank.components[d].normalize()]
             new = Vector()
             new.components = content
-            ranks += new
+            if rank.dot(new) > 0 :
+                ranks += new
+            else:
+                ranks += new.mul(-1.0)
         return ranks
 
     def iterate(self, other, alpha:float, target_dim:int, signage_test:bool = False, threshold:float = 0.):
@@ -189,7 +192,7 @@ class Vector :
         return self
 
     @staticmethod
-    @tf.function(jit_compile=True)
+    @tf.function(jit_compile=True, reduce_retracing=True)
     def _xla_solve_and_normalize(overlap_uu, b_matrix, alpha):
         """
         FUSED XLA KERNEL
@@ -456,7 +459,7 @@ class Vector :
         # 3. MERGE & LEARN
         stats = Y.Decompose(self, ambiguity_rate=ambiguity_rate, tune_rate=tune_rate, iterate=total_iterate, alpha=total_alpha, max_allowed_distance=max_allowed_distance)
         
-        print("ambiguity_rate", ambiguity_rate, self.dist(Y))
+        #print("ambiguity_rate", ambiguity_rate, self.dist(Y))
         return Y
 
 
@@ -633,12 +636,16 @@ class Vector :
         else:
             # 2. Fit K-Means on your overlap dot-product matrix
             # Ensure your .dot() method returns a numpy array compatible with sklearn
-            overlap_matrix = self.dot(self, sum_=False)
-            kmeans = KMeans(n_clusters=self.partition, random_state=42, n_init="auto")
-            kmeans.fit(overlap_matrix)
-            
-            self.labels = kmeans.labels_
-            return self
+            try:
+                overlap_matrix = self.dot(self, sum_=False)
+                kmeans = KMeans(n_clusters=self.partition, random_state=42, n_init="auto")
+                kmeans.fit(overlap_matrix)
+                
+                self.labels = kmeans.labels_
+                return self
+            except:
+                self.labels = [0]
+                return self
 
     def __next__(self):
         # 3. Strict termination guard

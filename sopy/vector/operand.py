@@ -36,7 +36,7 @@ class Operand():
         return Operand(self.re.copy(norm_ = norm_, threshold = threshold), self.im.copy(norm_=norm_, threshold = threshold))
         
     def __len__(self):
-        return 8*(len(self.re)+len(self.im))
+        return (len(self.re)+len(self.im))
         
     def complex1(self,  ctl1, ext_i, mask = [] , dict_lattices = None):
         """
@@ -278,14 +278,24 @@ class Operand():
            im = tf.math.imag(c)
 
         if re is not None:
-            self.re *= re
-            self.im *= re
+            if len(self.re) > 0 :
+                self.re *= re
+            if len(self.im) > 0 :
+               self.im *= re
             return self
         if im is not None:
-            self.re *= im
-            self.im *= -im
+            if len(self.re) > 0 :
+                self.re *= im
+            if len(self.im) > 0 :
+                self.im *= -im
             return self.swap()
-        return Operand( self.re.mul(re) - self.im.mul(im), self.re.mul(im) + self.im.mul(re))
+
+        if (len(self.re) >0 ) and ( len(self.im) > 0 ):
+            return Operand( self.re.mul(re) - self.im.mul(im), self.re.mul(im) + self.im.mul(re))
+        elif len(self.re) > 0 :
+            return Operand( self.re.mul(re), Vector())
+        elif len(self.im) > 0 :
+            return Operand( -self.im.mul(im), Vector())
 
 
     def swap(self):
@@ -298,9 +308,23 @@ class Operand():
         return self
     
     def Fibonacci(self, canon=None, ambiguity_rate = 0.1,  level = 0, iterate=10, total_iterate=3, alpha=1e-9, total_alpha=1e-9, tune_rate=0.01, max_allowed_distance=2.0):
-        return Operand( self.re.Fibonacci(canon=canon, ambiguity_rate=ambiguity_rate, level=level, iterate=iterate, total_iterate=total_iterate, alpha=alpha, total_alpha=total_alpha, tune_rate=tune_rate),
-                        self.im.Fibonacci(canon=canon, ambiguity_rate=ambiguity_rate, level=level, iterate=iterate, total_iterate=total_iterate, alpha=alpha, total_alpha=total_alpha, tune_rate=tune_rate)
-        )
+        def go(x):
+            if canon is None:
+                if len(x) > 1:
+                    return x.Fibonacci(canon=canon, ambiguity_rate=ambiguity_rate, level=level, iterate=iterate, total_iterate=total_iterate, alpha=alpha, total_alpha=total_alpha, tune_rate=tune_rate)
+                elif len(x)==1:
+                    return x
+                else:
+                    return Vector()
+            else:
+                if len(x) <= canon:
+                    return x
+                else:
+                    return x.Fibonacci(canon=canon, ambiguity_rate=ambiguity_rate, level=level, iterate=iterate, total_iterate=total_iterate, alpha=alpha, total_alpha=total_alpha, tune_rate=tune_rate)
+
+        return Operand( go(self.re),
+                        go(self.im)
+                )
     
     def mul(self, re):
         other = self.copy()
