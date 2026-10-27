@@ -11,7 +11,6 @@ import tensorflow as tf
 from . import component
 from bandlimit.gaussian import ops
 
-
 class Momentum(component.Component):
     def __init__(self, lattice , contents = [], transform = [] ):
         super().__init__(lattice, contents, transform)
@@ -19,7 +18,8 @@ class Momentum(component.Component):
         one  = tf.constant(1., tf.float64)
         self.complexity = tf.constant(tf.complex(one,zero), dtype = tf.complex128)
         self.spacing = abs(lattice[1] - lattice[0])
-        self.p = tf.convert_to_tensor( [ [ -( -1 )**(i-j)/(i-j) if i != j else 0 for j in range(len(lattice)) ] for i in range(len(lattice))] , dtype = tf.float64)
+        #self.p = tf.convert_to_tensor( [ [ -( -1 )**(i-j)/(i-j) if i != j else 0 for j in range(len(lattice)) ] for i in range(len(lattice))] , dtype = tf.float64)
+        #self.p2 = tf.convert_to_tensor( [ [-2*( -1 )**(i-j)/(i-j)**2 if i != j else pi**2/3.00 for j in range(len(lattice)) ] for i in range(len(lattice))] , dtype = tf.float64)
 
     @classmethod
     def from_Component(cls, component_instance):
@@ -54,15 +54,56 @@ class Momentum(component.Component):
     ##(A)reduce band-pass to pi/spacing
     ##
     
-    def P(self, compl = True):
-        zero = tf.constant(0., tf.float64)
-        one  = tf.constant(1., tf.float64)
+
+    def P(self, compl=True):
+        zero = tf.constant(0.0, dtype=tf.float64)
+        one  = tf.constant(1.0, dtype=tf.float64)
         new = self.copy()
-        new.contents = tf.matmul(self.contents ,self.p)/self.spacing
-        if compl :
-            new.complexity *= tf.constant(tf.complex(zero,-one))
+        
+        N = tf.shape(self.contents)[-1]
+        n_index = tf.range(1, N, dtype=tf.float64)
+
+        # Ensure n_index is a float64 tensor (e.g., tf.range(1, N, dtype=tf.float64))
+        n_idx = tf.cast(n_index, tf.float64)
+        
+        diag_P = tf.constant([0.0], dtype=tf.float64)
+        off_diag_P = ((-1.0) ** n_idx) / n_idx
+        
+        # Replaces np.r_[diag_P, off_diag_P]
+        col = tf.concat([diag_P, off_diag_P], axis=0)
+        
+        # Note: scipy.linalg.toeplitz(col) creates a SYMMETRIC matrix (row = col).
+        # If you intended an ANTISYMMETRIC matrix for the first derivative, 
+        # use row = -col instead of row = col.
+        P_matrix = tf.linalg.LinearOperatorToeplitz(col=col, row=col).to_dense()
+        
+        new.contents = tf.matmul(self.contents, P_matrix) / tf.cast(self.spacing, tf.float64)
+        if compl:
+            new.complexity *= tf.complex(zero, -one)
         return new
-    
+
+
+    def P2(self, compl=True):
+        new = self.copy()
+        
+        N = tf.shape(self.contents)[-1]
+        n_index = tf.range(1, N, dtype=tf.float64)
+
+
+        n_idx = tf.cast(n_index, tf.float64)
+        
+        # Replaced invalid tf.array and np.pi with tf.constant and math.pi
+        diag_P2 = tf.constant([(math.pi ** 2) / 3.0], dtype=tf.float64)
+        off_diag_P2 = ((-1.0) ** n_idx) * (-2.0 / (n_idx ** 2))
+        
+        # Replaces np.r_[diag_P2, off_diag_P2]
+        col = tf.concat([diag_P2, off_diag_P2], axis=0)
+        
+        # Symmetric Toeplitz matrix
+        P2_matrix = tf.linalg.LinearOperatorToeplitz(col=col, row=col).to_dense()
+        
+        new.contents = tf.matmul(self.contents, P2_matrix) / (tf.cast(self.spacing, tf.float64) ** 2)
+        return new
     def h(self, k, poly = False):
         """
         momentum boost 
@@ -71,7 +112,7 @@ class Momentum(component.Component):
         zero = tf.constant(0., tf.float64)
         one  = tf.constant(1., tf.float64)
         k_re = tf.constant(k, dtype = tf.float64)
-        coef = ( (one if k_re >= 0 else one) if not poly else -tf.math.abs(k_re)*self.spacing/component.pi2 )
+        coef = ( (one if k_re >= 0 else one) if not poly else tf.math.abs(k_re)*self.spacing/component.pi2 )
 
         if ( abs(k_re) > component.pi2 / self.spacing /2 ):##A
             mul = tf.convert_to_tensor([ tf.complex(zero,zero) for position in tf.constant(self.lattice, dtype = tf.float64) ])

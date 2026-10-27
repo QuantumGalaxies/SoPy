@@ -119,79 +119,91 @@ class Operand():
             im += im1
         return Operand( re.balance(threshold), im.balance(threshold))
 
-    def exp_i(self, ks, threshold:float=1e-6, partition_re = None, partition_im = None, test_expedite = False):
+    def exp_i(self, ks, threshold:float=1e-6, test_expedite = False):
         """  
         cascade operators across dimensions in direct product
          exp( - ks[dim]*x )| x'>
         """
-        if partition_re is None:
-           partition_re = len(self.re)
-        if partition_im is None:
-           partition_im = len(self.im)
-        ctl1 = {}
         re = Vector()
         im = Vector()
-        if len( self.re ) > 0 :
-          for rank in self.re.set(partition_re):
-            mask = [0]
-            if test_expedite:
-                list_ops = [[2,3,3]]*len( self.re.dims(True) ) 
-            else:
-                list_ops = [[1,2,3,4]]*len( self.re.dims(True) ) 
-            for tss in itertools.product( *list_ops ) :
-                ctl1[0] = tf.convert_to_tensor( [rank[0][0]] ,dtype=tf.complex128)
-                for d,space in enumerate(self.re.dims(True)):
-                    ts = tss[d]
-                    if ts == 1:
-                       re_momentum, im_momentum = rank.contents[0][space].g(ks[d],P=True)
-                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
-                    if ts == 2:
-                       re_momentum, im_momentum = rank.contents[0][space].h(ks[d],poly=False)
-                       #mask += [space]
-                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
-                    if ts == 3:
-                       re_momentum, im_momentum = rank.contents[0][space].h(ks[d],poly=True)
-                       #mask += [space]
-                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
-                    if ts == 4:
-                       re_momentum, im_momentum = rank.contents[0][space].P().g(ks[d])
-                       ctl1[space] = [-1.0*(tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128))]
+        for rank in [self.re, self.im]:
+            if len( rank ) > 0 :
+                if test_expedite:
+                    list_ops = [[2,3]]*len( self.re.dims(True) ) 
+                else:
+                    list_ops = [[1,2,3,4]]*len( self.re.dims(True) ) 
+                for tss in itertools.product( *list_ops ) :
+                    components_re = [rank.components[0]]
+                    components_im = [rank.components[0]]
+                    for d,space in enumerate(self.re.dims(True)):
+                        ts = tss[d]
+                        if ts == 1:
+                            re_momentum, im_momentum = rank.components[space].g(ks[d],P=True)
+                        elif ts == 2:
+                            re_momentum, im_momentum = rank.components[space].h(ks[d],poly=False)
+                        elif ts == 3:
+                            re_momentum, im_momentum = rank.components[space].copy().sign_flip().h(ks[d],poly=True)
+                        elif ts == 4:
+                            re_momentum, im_momentum = rank.components[space].copy().sign_flip().P().g(ks[d])
+                        components_re += [re_momentum]
+                        components_im += [im_momentum]
+                    re1 = Vector()
+                    re1.components = components_re
 
-                re1, im1 = self.complex1( ctl1, ext_i=0, mask=mask)
-                re += re1
-                im += im1
+                    im1 = Vector()
+                    im1.components = components_im
+                    re += re1
+                    im += im1
 
-        if len( self.im ) > 0 :
-          for rank in self.im.set(partition_im):
-            mask = []
-            if test_expedite:
-                list_ops = [[2,3,3]]*len( self.re.dims(True) ) 
-            else:
-                list_ops = [[1,2,3,4]]*len( self.re.dims(True) ) 
-            for tss in itertools.product( *list_ops ) :
-                ctl1[0] = tf.convert_to_tensor( [rank[0][0]] ,dtype=tf.complex128)
-                for d,space in enumerate(self.im.dims(True)):
-                    ts = tss[d]
-                    if ts == 1:
-                       re_momentum, im_momentum = rank.contents[0][space].g(ks[d],P=True)
-                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
-                    if ts == 2:
-                       re_momentum, im_momentum = rank.contents[0][space].h(ks[d],poly=False)
-                       #mask += [space]
-                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
-                    if ts == 3:
-                       re_momentum, im_momentum = rank.contents[0][space].h(ks[d],poly=True)
-                       #mask += [space]
-                       ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
-                    if ts == 4:
-                       re_momentum, im_momentum = rank.contents[0][space].P().g(ks[d])
-                       ctl1[space] = [-1.0*(tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128))]
-
-                re1, im1 = self.complex1( ctl1, ext_i=1, mask=mask)
-                re += re1
-                im += im1
         return Operand( re.balance(threshold), im.balance(threshold))
 
+    def exp_i2(self, ks, threshold:float=1e-6, test_expedite = False):
+        """  
+        cascade operators across dimensions in direct product
+         exp( - ks[dim]*x )| x'>
+        """
+        re = Vector()
+        im = Vector()
+        for rank in [self.re, self.im]:
+            if len( rank ) > 0 :
+                if test_expedite:
+                    list_ops = [[2]]*len( self.re.dims(True) ) 
+                else:
+                    list_ops = [[1,2]]*len( self.re.dims(True) ) 
+                for tss in itertools.product( *list_ops ) :
+                    components_re1 = [rank.components[0]]
+                    components_im1 = [rank.components[0]]
+                    components_re2 = [rank.components[0]]
+                    components_im2 = [rank.components[0]]
+                    for d,space in enumerate(self.re.dims(True)):
+                        ts = tss[d]
+                        if ts == 1:
+                            re_momentum1, im_momentum1 = rank.components[space].g(ks[d],P=True)
+                            re_momentum2, im_momentum2 = rank.components[space].copy()3
+                            .sign_flip().P().g(ks[d])
+                        elif ts == 2:
+                            re_momentum1, im_momentum1 = rank.components[space].h(ks[d],poly=False)
+                            re_momentum2, im_momentum2 = rank.components[space].copy().sign_flip().h(ks[d],poly=True)
+                        components_re1 += [re_momentum1]
+                        components_im1 += [im_momentum1]
+                        components_re2 += [re_momentum2]
+                        components_im2 += [im_momentum2]
+
+                    re1 = Vector()
+                    re1.components = components_re1
+                    re2 = Vector()
+                    re2.components = components_re2
+
+                    im1 = Vector()
+                    im1.components = components_im1
+                    im2 = Vector()
+                    im2.components = components_im2
+                    re += re1
+                    im += im1
+                    re += re2
+                    im += im2
+
+        return Operand( re.balance(threshold), im.balance(threshold))
 
     def exp2(self, alphas, positions):
         """  
@@ -212,13 +224,13 @@ class Operand():
                 for d,space in enumerate(self.re.dims(True)):
                     ts = tss[d]
                     if ts == 1:
-                       re_momentum, im_momentum = rank.contents[0][space].g2(alphas[d], positions[d], P=True)
+                       re_momentum, im_momentum = rank.components[space].g2(alphas[d], positions[d], P=True)
                        ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
                     if ts == 2:
-                       re_momentum, im_momentum = rank.contents[0][space].h2(alphas[d], positions[d])
+                       re_momentum, im_momentum = rank.components[space].h2(alphas[d], positions[d])
                        ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
                     if ts == 3:
-                       re_momentum, im_momentum = rank.contents[0][space].P().g2(alphas[d], positions[d])
+                       re_momentum, im_momentum = rank.components[space].P().g2(alphas[d], positions[d])
                        ctl1[space] = [-(tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128))]
 
                 re1, im1 = self.complex1( ctl1, ext_i = 0, mask = mask)
@@ -234,14 +246,14 @@ class Operand():
                 for d,space in enumerate(self.im.dims(True)):
                     ts = tss[d]
                     if ts == 1:
-                       re_momentum, im_momentum = rank.contents[0][space].g2(alphas[d], positions[d], P=True)
+                       re_momentum, im_momentum = rank.components[space].g2(alphas[d], positions[d], P=True)
                        ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
                     if ts == 2:
-                       re_momentum, im_momentum = rank.contents[0][space].h2(alphas[d], positions[d])
+                       re_momentum, im_momentum = rank.components[space].h2(alphas[d], positions[d])
                        ctl1[space] = [tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128)]
                     if ts == 3:
-                       re_momentum, im_momentum = rank.contents[0][space].P().g2(alphas[d], positions[d])
-                       ctl1[space] = [-(tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0] , dtype = tf.complex128))]
+                       re_momentum, im_momentum = rank.components[space].P().g2(alphas[d], positions[d])
+                       ctl1[space] = [-(tf.cast(re_momentum.contents[0], dtype = tf.complex128) + 1.0j*tf.cast( im_momentum.contents[0], dtype = tf.complex128))]
 
                 re1, im1 = self.complex1( ctl1, ext_i = 1, mask = mask)
                 re += re1

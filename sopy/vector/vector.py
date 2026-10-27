@@ -24,6 +24,12 @@ class Vector :
     def lattices(self):
         return [ self.components[space].lattice for space in self.dims(True) ]
 
+    def set_lattices(self, lattices):
+        for i, l in zip(range(1, len(self.components)), lattices):
+            self.components[i].lattice = l
+            self.components[i].spacing = l[1]-l[0]
+        return self
+
     def __len__(self):
         """
         Returns the number of ranks (rows).

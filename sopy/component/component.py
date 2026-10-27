@@ -66,6 +66,10 @@ class Component :
         self.contents = tf.transpose(tf.linalg.normalize(tf.transpose(self.contents),axis=0)[0])
         return self
 
+    def sign_flip(self):
+        self.contents *= -1.0
+        return self
+
     def amplitude(self):
         return tf.linalg.normalize((self.contents),axis=1)[1]
 
