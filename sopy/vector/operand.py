@@ -179,7 +179,7 @@ class Operand():
                         ts = tss[d]
                         if ts == 1:
                             re_momentum1, im_momentum1 = rank.components[space].g(ks[d],P=True)
-                            re_momentum2, im_momentum2 = rank.components[space].copy()3
+                            re_momentum2, im_momentum2 = rank.components[space].copy()
                             .sign_flip().P().g(ks[d])
                         elif ts == 2:
                             re_momentum1, im_momentum1 = rank.components[space].h(ks[d],poly=False)
